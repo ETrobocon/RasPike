@@ -1,0 +1,73 @@
+#
+#		Makefile のターゲット依存部（Mac OS X用）
+#
+#  $Id: Makefile.target 572 2016-02-01 14:40:09Z ertl-hiro $
+#
+
+#
+#  システム名，開発環境名の定義
+#
+SYS = macosx
+TOOL = xcode
+
+#
+#  ツール依存部ディレクトリ名の定義 
+#
+#  GCC向けのツール依存部を流用する．
+#
+TOOLDIR = $(SRCDIR)/arch/gcc
+
+#
+#  開発ツールのコマンド名の定義
+#
+#  objcopyとobjdumpは，それぞれ，gobjcopyとgobjdumpを用いる．
+#
+CC = cc
+CXX = c++
+AS = as
+LD = ld
+AR = ar
+NM = nm
+RANLIB = ranlib
+OBJCOPY = gobjcopy
+OBJDUMP = gobjdump
+
+#
+#  offset.hは使用しない
+#
+OMIT_OFFSET_H = true
+
+#
+#  コンパイルオプション
+#
+#  カーネルを関数単位でコンパイルする時には，未使用関数の警告を抑止する．
+#
+INCLUDES := $(INCLUDES) -I$(TARGETDIR) -I$(TOOLDIR)
+COPTS := -m32 -Werror $(COPTS)
+ifdef KERNEL_FUNCOBJS
+	COPTS := -Wno-unused-function $(COPTS)
+endif
+
+#
+#  カーネルに関する定義
+#
+KERNEL_DIRS := $(KERNEL_DIRS) $(TARGETDIR)
+KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o
+
+#
+#  システムサービスに関する定義
+#
+SYSSVC_COBJS := $(SYSSVC_COBJS)
+
+#
+#  コンフィギュレータ関係の変数の定義
+#
+CFG_TABS := $(CFG_TABS) --symval-table $(TARGETDIR)/target_sym.def
+
+#
+#  トレースログ記録のサンプルコードに関する定義
+#
+ifdef ENABLE_TRACE
+	COPTS := $(COPTS) -DTOPPERS_ENABLE_TRACE
+	SYSSVC_DIRS := $(SYSSVC_DIRS) $(SRCDIR)/arch/tracelog
+endif

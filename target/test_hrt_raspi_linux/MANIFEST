@@ -1,0 +1,8 @@
+PACKAGE asp3_target_macosx_xcode
+
+MANIFEST
+Makefile.target
+target_kernel.h
+target_syssvc.h
+target_timer.c
+target_timer.h
