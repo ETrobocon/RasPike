@@ -1,0 +1,32 @@
+# target_kernel_impl.c
+dispatch
+start_dispatch
+exit_and_dispatch
+ret_int
+ret_exc
+call_exit_kernel
+start_r
+target_initialize
+target_exit
+
+# target_timer.c
+target_hrt_initialize
+target_hrt_terminate
+target_hrt_get_current
+target_hrt_set_event
+target_hrt_raise_event
+target_hrt_handler
+target_ovrtimer_initialize
+target_ovrtimer_terminate
+target_ovrtimer_start
+target_ovrtimer_stop
+target_ovrtimer_get_current
+target_ovrtimer_handler
+
+# tTraceLog.c
+log_dsp_enter
+log_dsp_leave
+log_inh_enter
+log_inh_leave
+log_exc_enter
+log_exc_leave

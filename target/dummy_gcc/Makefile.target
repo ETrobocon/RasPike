@@ -1,0 +1,52 @@
+#
+#		Makefile のターゲット依存部（ダミーターゲット用）
+#
+#  $Id: Makefile.target 572 2016-02-01 14:40:09Z ertl-hiro $
+# 
+
+#
+#  システム名，開発環境名の定義
+#
+SYS = dummy
+TOOL = gcc
+
+#
+#  ツール依存部ディレクトリ名の定義 
+#
+TOOLDIR = $(SRCDIR)/arch/$(TOOL)
+
+#
+#  GNU開発環境のターゲットアーキテクチャの定義
+#
+#  ダミーターゲット用であるため，定義しない．
+#
+#GCC_TARGET =
+
+#
+#  コンパイルオプション
+#
+INCLUDES := $(INCLUDES) -I$(TARGETDIR) -I$(TOOLDIR)
+
+#
+#  カーネルに関する定義
+#
+KERNEL_DIRS := $(KERNEL_DIRS) $(TARGETDIR)
+KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o
+
+#
+#  システムサービスに関する定義
+#
+SYSSVC_COBJS := $(SYSSVC_COBJS)
+
+#
+#  コンフィギュレータ関係の変数の定義
+#
+CFG_TABS := $(CFG_TABS) --symval-table $(TARGETDIR)/target_sym.def
+
+#
+#  トレースログ記録のサンプルコードに関する定義
+#
+ifdef ENABLE_TRACE
+	COPTS := $(COPTS) -DTOPPERS_ENABLE_TRACE
+	SYSSVC_DIRS := $(SYSSVC_DIRS) $(SRCDIR)/arch/tracelog
+endif
