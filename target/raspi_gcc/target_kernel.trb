@@ -1,0 +1,226 @@
+# -*- coding: utf-8 -*-
+#
+#   TOPPERS/ASP Kernel
+#       Toyohashi Open Platform for Embedded Real-Time Systems/
+#       Advanced Standard Profile Kernel
+# 
+#   Copyright (C) 2015 by FUJI SOFT INCORPORATED, JAPAN
+#   Copyright (C) 2015,2016 by Embedded and Real-Time Systems Laboratory
+#               Graduate School of Information Science, Nagoya Univ., JAPAN
+# 
+#   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
+#   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
+#   変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
+#   (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
+#       権表示，この利用条件および下記の無保証規定が，そのままの形でソー
+#       スコード中に含まれていること．
+#   (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
+#       用できる形で再配布する場合には，再配布に伴うドキュメント（利用
+#       者マニュアルなど）に，上記の著作権表示，この利用条件および下記
+#       の無保証規定を掲載すること．
+#   (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
+#       用できない形で再配布する場合には，次のいずれかの条件を満たすこ
+#       と．
+#     (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
+#         作権表示，この利用条件および下記の無保証規定を掲載すること．
+#     (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
+#         報告すること．
+#   (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
+#       害からも，上記著作権者およびTOPPERSプロジェクトを免責すること．
+#       また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
+#       由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
+#       免責すること．
+# 
+#   本ソフトウェアは，無保証で提供されているものである．上記著作権者お
+#   よびTOPPERSプロジェクトは，本ソフトウェアに関して，特定の使用目的
+#   に対する適合性も含めて，いかなる保証も行わない．また，本ソフトウェ
+#   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
+#   の責任を負わない．
+# 
+#   $Id: target_kernel.trb 790 2017-04-01 10:20:15Z ertl-hiro $
+# 
+
+#
+#		パス2の生成スクリプトのターゲット依存部（Mac OS X用）
+#
+
+#
+#  使用できる割込み番号とそれに対応する割込みハンドラ番号
+#
+#  割込み番号と割込みハンドラ番号は，シグナル番号に一致させる．1〜31の
+#  シグナル番号の内，SIGKILL（＝9），SIGSTOP（＝17），SIGUSR2（＝31）以
+#  外が使用できる．
+#
+$INTNO_VALID = [ *(1..8), *(10..16), *(18..30) ]
+$INHNO_VALID = $INTNO_VALID
+$EXCNO_VALID = $INTNO_VALID
+
+#
+#  CFG_INTで使用できる割込み番号と割込み優先度
+#
+#  割込み優先度は，-1〜-7が使用できる．-7はNMIと扱う．
+#
+$INTPRI_CFGINT_VALID = [ *(-7..-1) ]
+
+#
+#  スタック領域の確保関数
+#
+#  Intelプロセッサでは，スタックポインタを16バイト境界にアラインさせる
+#  必要がある．
+#
+def AllocStack(stack, size)
+  $kernelCfgC.add("static STK_T #{stack}[COUNT_STK_T(#{size})]" \
+									" __attribute__((aligned(16)));")
+  return("ROUND_STK_T(#{size})")
+end
+
+#
+#  ターゲット非依存部のインクルード
+#
+IncludeTrb("kernel/kernel.trb")
+
+#
+#  ターゲット依存の定義の生成
+#
+$kernelCfgC.comment_header("Target-dependent Definitions (Mac OS X)")
+
+#
+#  マスクできないシグナルとカーネルが使うシグナルに関する設定
+#
+#  SIGKILL（マスク不可）
+#  SIGSTOP（マスク不可）
+#  SIGUSR2（カーネルが利用）
+#
+targetIntpri = {}
+targetIntpri[$SIGKILL] = -7
+targetIntpri[$SIGSTOP] = -7
+targetIntpri[$SIGUSR2] = -7
+
+#
+#  割込み要求ラインに関するターゲット依存のエラーチェック
+#
+$cfgData[:CFG_INT].sort.each do |key, params|
+  if (params[:intatr] & $TA_EDGE) == 0
+    error_ercd("E_RSATR", params, "level trigger is not supported " \
+											"for %%intno in %apiname")
+  end
+end
+
+#
+#  CPU例外ハンドラに関する処理
+#
+$cfgData[:DEF_EXC].sort.each do |key, params|
+  #	割込みハンドラとの重複チェック
+  if $cfgData[:DEF_INH].has_key?(params[:excno].val)
+    inhnoParams = $cfgData[:DEF_INH][params[:excno].val]
+    error_ercd("E_OBJ", params, "%%excno in %apiname " \
+						"is duplicated with inhno `#{inhnoParams[:inhno]}'")
+  end
+
+  #	CPU例外ハンドラを登録したシグナルに関する設定
+  targetIntpri[params[:excno].val] = -7
+end
+
+#
+#  デバッグ用にマスクしないシグナルに関する設定
+#
+#  SIGINT（デバッグ用）
+#  SIGBUS（デバッグ用）
+#  SIGSEGV（デバッグ用）
+#
+targetIntpri[$SIGINT] = -7
+targetIntpri[$SIGBUS] = -7
+targetIntpri[$SIGSEGV] = -7
+
+#
+#  割込みハンドラの初期化に必要な情報
+#
+
+#
+#  定義する割込みハンドラの数
+#
+$kernelCfgC.add(<<EOS)
+#define TNUM_DEF_INHNO	#{$cfgData[:DEF_INH].size}
+const uint_t _kernel_tnum_def_inhno = TNUM_DEF_INHNO;
+EOS
+
+if $cfgData[:DEF_INH].size != 0
+  #
+  #  割込みハンドラのエントリ
+  #
+  $cfgData[:DEF_INH].each do |key, params|
+    if (params[:inhatr] & $TA_NONKERNEL) == 0
+      intnoVal = $toIntnoVal[params[:inhno].val]
+      intnoParams = $cfgData[:CFG_INT][intnoVal]
+      if !intnoParams.nil?			# CFG_INTがない場合の対策
+        $kernelCfgC.add("INTHDR_ENTRY(#{params[:inhno]}, " \
+						"#{params[:inthdr]}, #{intnoParams[:intpri]})")
+      end
+    end
+  end
+  $kernelCfgC.add
+
+  #
+  #  割込みハンドラ初期化ブロック
+  #
+  $kernelCfgC.add("const INHINIB _kernel_inhinib_table[TNUM_DEF_INHNO] = {")
+  $cfgData[:DEF_INH].each_with_index do |(key, params), index|
+    $kernelCfgC.add(",") if index > 0
+    intnoVal = $toIntnoVal[params[:inhno].val]
+    intnoParams = $cfgData[:CFG_INT][intnoVal]
+    if (params[:inhatr] & $TA_NONKERNEL) == 0
+      inthdr = "(FP)(INT_ENTRY(#{params[:inhno]}, #{params[:inthdr]}))"
+    else
+      inthdr = "(FP)(#{params[:inthdr]})"
+    end
+    if !intnoParams.nil?			# CFG_INTがない場合の対策
+      $kernelCfgC.append("\t{ (#{params[:inhno]}), (#{params[:inhatr]}), " \
+								"#{inthdr}, (#{intnoParams[:intpri]}) }")
+    end
+  end
+  $kernelCfgC.add
+  $kernelCfgC.add2("};")
+else
+  $kernelCfgC.add2("TOPPERS_EMPTY_LABEL(const INHINIB, " \
+										"_kernel_inhinib_table);")
+end
+
+#
+#  割込み優先度毎のそれ以下の割込み要求をマスクするための情報のテーブル
+#
+intmask = 0
+$kernelCfgC.add("const sigset_t _kernel_sigmask_table[8] = {")
+(-6..0).reverse_each do |intpri|
+  intmask = 0
+  (1..31).each do |intnoVal|
+    if $cfgData[:CFG_INT].has_key?(intnoVal)
+      intnoParams = $cfgData[:CFG_INT][intnoVal]
+      if intnoParams[:intpri] >= intpri
+        intmask = intmask | (1 << (intnoVal - 1))
+      end
+    else
+      if !targetIntpri.has_key?(intnoVal) || targetIntpri[intnoVal] >= intpri
+        intmask = intmask | (1 << (intnoVal - 1))
+      end
+    end
+  end
+#  $kernelCfgC.add("\tUINT32_C(#{sprintf("0x%08x", intmask)}),")
+  $kernelCfgC.add("\t{ {UINT32_C(#{sprintf("0x%08x", intmask)}), 0} },")
+end
+#$kernelCfgC.add("\tUINT32_C(#{sprintf("0x%08x", intmask)})")
+$kernelCfgC.add("\t{ {UINT32_C(#{sprintf("0x%08x", intmask)}), 0} }")
+$kernelCfgC.add2("};")
+
+#
+#  割込み要求禁止フラグ実現のための変数の初期値
+#
+sigmask_disint_init = 0
+$cfgData[:CFG_INT].each do |key, params|
+  if (params[:intatr] & $TA_ENAINT) == 0
+    sigmask_disint_init |= (1 << (params[:intno] - 1))
+  end
+end
+#$kernelCfgC.add2("const sigset_t\t_kernel_sigmask_disint_init = " \
+#					"UINT32_C(#{sprintf("0x%08x", sigmask_disint_init)});")
+$kernelCfgC.add2("const sigset_t\t_kernel_sigmask_disint_init = { " \
+					"{ UINT32_C(#{sprintf("0x%08x", sigmask_disint_init)}) ,0}};")

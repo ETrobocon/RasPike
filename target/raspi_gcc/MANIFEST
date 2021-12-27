@@ -1,0 +1,34 @@
+PACKAGE asp3_target_raspi_gcc
+VERSION 3.2.0
+
+E_PACKAGE
+MANIFEST
+Makefile.target
+macosx.h
+tPutLogMacOSX.c
+tPutLogMacOSX.cdl
+tSIOPortMacOSX.cdl
+tSIOPortMacOSXMain.c
+target.cdl
+target_cfg1_out.h
+target_check.trb
+target_kernel.cfg
+target_kernel.h
+target_kernel.trb
+target_kernel_impl.c
+target_kernel_impl.h
+target_rename.def
+target_rename.h
+target_sil.h
+target_stddef.h
+target_sym.def
+target_syssvc.h
+target_test.h
+target_timer.c
+target_timer.cfg
+target_timer.h
+target_unrename.h
+target_user.txt
+tecs_termios.h
+
+INCLUDE ../test_hrt_macosx_xcode/MANIFEST
