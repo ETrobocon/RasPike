@@ -16,26 +16,26 @@ https://github.com/ytoi/raspi_simple_setjmp.git
 これをmakeしてできたlibssetjmp.soをLD_PRELOAD環境変数を使うことで、libcよりも早く読み込ませて置き換えをおこないます。
 
 makeのやり方
-
+```
 mkdir obj
 cd obj
 ../configure.rb -T raspi_gcc
 make
-
+```
 
 実行の仕方
-
+```
 env LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so ./asp
-
+```
 で実行できます。
 
 gdbを使う場合は
-
+```
 gdb asp
 gdb) set environment LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so
 gdb) handle SIGUSR2 noprint nostop pass
 gdb) r
-
+```
 で実行できます。シミュレータではSIGUSR2をプライオリティ変更のとりがとして利用しているので、SIGUSR2をgdbがトラップせずにaspアプリ側に渡す必要があります。
 
 
