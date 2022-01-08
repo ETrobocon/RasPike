@@ -4,6 +4,9 @@ Raspi用asp シミュレータ
 このraspi用aspシミュレータはMac OS X用のシミュレータをraspi用に修正したものです。
 https://www.toppers.jp/asp3-e-download.html
 athrillのバージョンに合わせるため、3.2.0を使用しています。
+また、linux用の変更やsetjmp/longjmpのmangleに関しては
+https://qiita.com/morioka/items/a186fff4db1eabb7e7de
+を参考にしています。
 
 mac os x用のシミュレータはsetjmp/longjmpの仕組みを使ってコンテキストスイッチを行なっていますが、通常のsetjmp/longjmpで設定されるPC/SPはmangleされており、オリジナルのシミュレータのようにjmp_bufにポインタを簡単に設定することはできません。そのため、mangleを行わないsetjmp/longjmpを組み合わせることで実行できるようにしています。
 

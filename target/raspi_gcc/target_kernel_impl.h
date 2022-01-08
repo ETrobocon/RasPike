@@ -138,8 +138,8 @@
 #define DEFAULT_ISTKSZ			SIGSTKSZ	/* シグナルスタックのサイズ */
 
 #elif defined(__arm__)
-#define JMPBUF_PC                               7                       /* jmp_buf中でのPCの位置 */
-#define JMPBUF_SP                               2                       /* jmp_buf中でのSPの位置 */
+#define JMPBUF_PC                               1                       /* jmp_buf中でのPCの位置 */
+#define JMPBUF_SP                               0                       /* jmp_buf中でのSPの位置 */
 #define TASK_STACK_MERGIN               4U
 #define DEFAULT_ISTKSZ                  SIGSTKSZ        /* シグナルスタックのサイズ */
 

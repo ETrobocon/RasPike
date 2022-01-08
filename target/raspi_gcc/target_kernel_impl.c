@@ -103,7 +103,8 @@ dispatcher(void)
 
 	p_runtsk = p_schedtsk;
 	if (p_runtsk != NULL) {
-		_longjmp(p_runtsk->tskctxb.env, 1);
+		/*_longjmp(p_runtsk->tskctxb.env, 1);*/
+		longjmp(p_runtsk->tskctxb.env, 1);
 		assert(0);
 	}
 
@@ -131,7 +132,7 @@ dispatch(void)
 #ifdef TOPPERS_SUPPORT_OVRHDR
 	ovrtimer_stop();					/* オーバランタイマの停止 */
 #endif /* TOPPERS_SUPPORT_OVRHDR */
-	if (_setjmp(p_runtsk->tskctxb.env) == 0) {
+	if (setjmp(p_runtsk->tskctxb.env) == 0) {
 		LOG_DSP_ENTER(p_runtsk);
 		dispatcher();
 		assert(0);
@@ -157,7 +158,7 @@ dispatch_handler(int sig, siginfo_t *p_info, void *p_ctx)
 
 	if (p_runtsk != p_schedtsk) {
 		if (p_runtsk != NULL) {
-			if (_setjmp(p_runtsk->tskctxb.env) == 0) {
+			if (setjmp(p_runtsk->tskctxb.env) == 0) {
 				LOG_DSP_ENTER(p_runtsk);
 				dispatcher();
 				assert(0);
