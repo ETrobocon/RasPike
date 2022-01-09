@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: alarm.h 325 2015-06-21 05:48:02Z ertl-hiro $
+ *  $Id: alarm.h 333 2015-06-21 13:23:37Z ertl-hiro $
  */
 
 /*
@@ -48,6 +48,7 @@
 #define TOPPERS_ALARM_H
 
 #include "kernel_impl.h"
+#include <queue.h>
 #include "time_event.h"
 
 /*
@@ -69,19 +70,36 @@ typedef struct alarm_handler_control_block {
 } ALMCB;
 
 /*
+ *  使用していないアラーム通知管理ブロックのリスト
+ */
+extern QUEUE	free_almcb;
+
+/*
  *  アラーム通知IDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_almid;
+extern const ID	tmax_salmid;
 
 /*
  *  アラーム通知初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const ALMINIB	alminib_table[];
+extern ALMINIB			aalminib_table[];
+
+/*
+ *  アラーム通知の通知方法の格納エリア（kernel_cfg.c）
+ */
+extern T_NFYINFO	aalm_nfyinfo_table[];
 
 /*
  *  アラーム通知管理ブロックのエリア（kernel_cfg.c）
  */
 extern ALMCB	almcb_table[];
+
+/*
+ *  アラーム通知管理ブロックからアラーム通知IDを取り出すためのマクロ
+ */
+#define	ALMID(p_almcb)	((ID)(((p_almcb) - almcb_table) + TMIN_ALMID))
 
 /*
  *  アラーム通知機能の初期化

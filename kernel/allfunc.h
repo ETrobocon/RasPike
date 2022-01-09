@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: allfunc.h 788 2017-04-01 07:25:17Z ertl-hiro $
+ *  $Id: allfunc.h 801 2017-07-20 16:07:56Z ertl-hiro $
  */
 
 /*
@@ -48,6 +48,7 @@
 /* startup.c */
 #define TOPPERS_sta_ker
 #define TOPPERS_ext_ker
+#define TOPPERS_kermem
 
 /* task.c */
 #define TOPPERS_tskini
@@ -86,6 +87,8 @@
 #define TOPPERS_sigtim
 
 /* task_manage.c */
+#define TOPPERS_acre_tsk
+#define TOPPERS_del_tsk
 #define TOPPERS_act_tsk
 #define TOPPERS_can_act
 #define TOPPERS_get_tst
@@ -116,6 +119,8 @@
 
 /* semaphore.c */
 #define TOPPERS_semini
+#define TOPPERS_acre_sem
+#define TOPPERS_del_sem
 #define TOPPERS_sig_sem
 #define TOPPERS_wai_sem
 #define TOPPERS_pol_sem
@@ -126,6 +131,8 @@
 /* eventflag.c */
 #define TOPPERS_flgini
 #define TOPPERS_flgcnd
+#define TOPPERS_acre_flg
+#define TOPPERS_del_flg
 #define TOPPERS_set_flg
 #define TOPPERS_clr_flg
 #define TOPPERS_wai_flg
@@ -142,6 +149,8 @@
 #define TOPPERS_dtqsnd
 #define TOPPERS_dtqfsnd
 #define TOPPERS_dtqrcv
+#define TOPPERS_acre_dtq
+#define TOPPERS_del_dtq
 #define TOPPERS_snd_dtq
 #define TOPPERS_psnd_dtq
 #define TOPPERS_tsnd_dtq
@@ -158,6 +167,8 @@
 #define TOPPERS_pdqdeq
 #define TOPPERS_pdqsnd
 #define TOPPERS_pdqrcv
+#define TOPPERS_acre_pdq
+#define TOPPERS_del_pdq
 #define TOPPERS_snd_pdq
 #define TOPPERS_psnd_pdq
 #define TOPPERS_tsnd_pdq
@@ -175,6 +186,8 @@
 #define TOPPERS_mtxacq
 #define TOPPERS_mtxrel
 #define TOPPERS_mtxrela
+#define TOPPERS_acre_mtx
+#define TOPPERS_del_mtx
 #define TOPPERS_loc_mtx
 #define TOPPERS_ploc_mtx
 #define TOPPERS_tloc_mtx
@@ -185,6 +198,8 @@
 /* mempfix.c */
 #define TOPPERS_mpfini
 #define TOPPERS_mpfget
+#define TOPPERS_acre_mpf
+#define TOPPERS_del_mpf
 #define TOPPERS_get_mpf
 #define TOPPERS_pget_mpf
 #define TOPPERS_tget_mpf
@@ -197,9 +212,13 @@
 #define TOPPERS_get_tim
 #define TOPPERS_adj_tim
 #define TOPPERS_fch_hrt
+#define TOPPERS_chknfy
+#define TOPPERS_nfyhdr
 
 /* cyclic.c */
 #define TOPPERS_cycini
+#define TOPPERS_acre_cyc
+#define TOPPERS_del_cyc
 #define TOPPERS_sta_cyc
 #define TOPPERS_stp_cyc
 #define TOPPERS_ref_cyc
@@ -207,6 +226,8 @@
 
 /* alarm.c */
 #define TOPPERS_almini
+#define TOPPERS_acre_alm
+#define TOPPERS_del_alm
 #define TOPPERS_sta_alm
 #define TOPPERS_stp_alm
 #define TOPPERS_ref_alm
@@ -228,6 +249,10 @@
 #define TOPPERS_sns_ker
 
 /* interrupt.c */
+#define TOPPERS_isrini
+#define TOPPERS_isrcal
+#define TOPPERS_acre_isr
+#define TOPPERS_del_isr
 #define TOPPERS_intini
 #define TOPPERS_dis_int
 #define TOPPERS_ena_int

@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2016 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: cyclic.c 451 2015-08-14 15:29:07Z ertl-hiro $
+ *  $Id: cyclic.c 717 2016-03-31 07:03:53Z ertl-hiro $
  */
 
 /*
@@ -58,6 +58,22 @@
 #ifndef LOG_CYC_LEAVE
 #define LOG_CYC_LEAVE(p_cyccb)
 #endif /* LOG_CYC_LEAVE */
+
+#ifndef LOG_ACRE_CYC_ENTER
+#define LOG_ACRE_CYC_ENTER(pk_ccyc)
+#endif /* LOG_ACRE_CYC_ENTER */
+
+#ifndef LOG_ACRE_CYC_LEAVE
+#define LOG_ACRE_CYC_LEAVE(ercd)
+#endif /* LOG_ACRE_CYC_LEAVE */
+
+#ifndef LOG_DEL_CYC_ENTER
+#define LOG_DEL_CYC_ENTER(cycid)
+#endif /* LOG_DEL_CYC_ENTER */
+
+#ifndef LOG_DEL_CYC_LEAVE
+#define LOG_DEL_CYC_LEAVE(ercd)
+#endif /* LOG_DEL_CYC_LEAVE */
 
 #ifndef LOG_STA_CYC_ENTER
 #define LOG_STA_CYC_ENTER(cycid)
@@ -87,6 +103,7 @@
  *  周期通知の数
  */
 #define tnum_cyc	((uint_t)(tmax_cycid - TMIN_CYCID + 1))
+#define tnum_scyc	((uint_t)(tmax_scycid - TMIN_CYCID + 1))
 
 /*
  *  周期通知IDから周期通知管理ブロックを取り出すためのマクロ
@@ -94,18 +111,27 @@
 #define INDEX_CYC(cycid)	((uint_t)((cycid) - TMIN_CYCID))
 #define get_cyccb(cycid)	(&(cyccb_table[INDEX_CYC(cycid)]))
 
+#ifdef TOPPERS_cycini
+
+/*
+ *  使用していない周期通知管理ブロックのリスト
+ *
+ *  周期通知管理ブロックの先頭にはキューにつなぐための領域がないため，
+ *  タイムイベントブロック（tmevtb）の領域を用いる．
+ */
+QUEUE	free_cyccb;
+
 /*
  *  周期通知機能の初期化
  */
-#ifdef TOPPERS_cycini
-
 void
 initialize_cyclic(void)
 {
-	uint_t	i;
+	uint_t	i, j;
 	CYCCB	*p_cyccb;
+	CYCINIB	*p_cycinib;
 
-	for (i = 0; i < tnum_cyc; i++) {
+	for (i = 0; i < tnum_scyc; i++) {
 		p_cyccb = &(cyccb_table[i]);
 		p_cyccb->p_cycinib = &(cycinib_table[i]);
 		p_cyccb->tmevtb.callback = (CBACK) call_cyclic;
@@ -123,9 +149,136 @@ initialize_cyclic(void)
 			p_cyccb->cycsta = false;
 		}
 	}
+	queue_initialize(&free_cyccb);
+	for (j = 0; i < tnum_cyc; i++, j++) {
+		p_cyccb = &(cyccb_table[i]);
+		p_cycinib = &(acycinib_table[j]);
+		p_cycinib->cycatr = TA_NOEXS;
+		p_cyccb->p_cycinib = ((const CYCINIB *) p_cycinib);
+		p_cyccb->tmevtb.callback = (CBACK) call_cyclic;
+		p_cyccb->tmevtb.arg = (void *) p_cyccb;
+		queue_insert_prev(&free_cyccb, ((QUEUE *) &(p_cyccb->tmevtb)));
+	}
 }
 
 #endif /* TOPPERS_cycini */
+
+/*
+ *  周期通知の生成
+ */
+#ifdef TOPPERS_acre_cyc
+
+ER_UINT
+acre_cyc(const T_CCYC *pk_ccyc)
+{
+	CYCCB		*p_cyccb;
+	CYCINIB		*p_cycinib;
+	ATR			cycatr;
+	T_NFYINFO	nfyinfo, *p_nfyinfo;
+	RELTIM		cyctim;
+	RELTIM		cycphs;
+	ER			ercd, rercd;
+
+	LOG_ACRE_CYC_ENTER(pk_ccyc);
+	CHECK_TSKCTX_UNL();
+
+	cycatr = pk_ccyc->cycatr;
+	nfyinfo = pk_ccyc->nfyinfo;
+	cyctim = pk_ccyc->cyctim;
+	cycphs = pk_ccyc->cycphs;
+
+	CHECK_RSATR(cycatr, TA_STA);
+	rercd = check_nfyinfo(&nfyinfo);
+	if (rercd != E_OK) {
+		ercd = rercd;
+		goto error_exit;
+	}
+	CHECK_PAR(0 < cyctim && cyctim <= TMAX_RELTIM);
+	CHECK_PAR(0 <= cycphs && cycphs <= TMAX_RELTIM);
+
+	lock_cpu();
+	if (tnum_cyc == 0 || queue_empty(&free_cyccb)) {
+		ercd = E_NOID;
+	}
+	else {
+		p_cyccb = ((CYCCB *)(((char *) queue_delete_next(&free_cyccb))
+												- offsetof(CYCCB, tmevtb)));
+		p_cycinib = (CYCINIB *)(p_cyccb->p_cycinib);
+		p_cycinib->cycatr = cycatr;
+		if (nfyinfo.nfymode == TNFY_HANDLER) {
+			p_cycinib->exinf = nfyinfo.nfy.handler.exinf;
+			p_cycinib->nfyhdr = (NFYHDR)(nfyinfo.nfy.handler.tmehdr);
+		}
+		else {
+			p_nfyinfo = &acyc_nfyinfo_table[p_cycinib - acycinib_table];
+			*p_nfyinfo = nfyinfo;
+			p_cycinib->exinf = (intptr_t) p_nfyinfo;
+			p_cycinib->nfyhdr = notify_handler;
+		}
+		p_cycinib->cyctim = cyctim;
+		p_cycinib->cycphs = cycphs;
+
+		if ((p_cyccb->p_cycinib->cycatr & TA_STA) != 0U) {
+			p_cyccb->cycsta = true;
+			tmevtb_enqueue(&(p_cyccb->tmevtb), p_cyccb->p_cycinib->cycphs);
+		}
+		else {
+			p_cyccb->cycsta = false;
+		}
+		ercd = CYCID(p_cyccb);
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_ACRE_CYC_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_acre_cyc */
+
+/*
+ *  周期通知の削除
+ */
+#ifdef TOPPERS_del_cyc
+
+ER
+del_cyc(ID cycid)
+{
+	CYCCB	*p_cyccb;
+	CYCINIB	*p_cycinib;
+	ER		ercd;
+
+	LOG_DEL_CYC_ENTER(cycid);
+	CHECK_TSKCTX_UNL();
+	CHECK_ID(VALID_CYCID(cycid));
+	p_cyccb = get_cyccb(cycid);
+
+	lock_cpu();
+	if (p_cyccb->p_cycinib->cycatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (cycid <= tmax_scycid) {
+		ercd = E_OBJ;
+	}
+	else {
+		if (p_cyccb->cycsta) {
+			p_cyccb->cycsta = false;
+			tmevtb_dequeue(&(p_cyccb->tmevtb));
+		}
+
+		p_cycinib = (CYCINIB *)(p_cyccb->p_cycinib);
+		p_cycinib->cycatr = TA_NOEXS;
+		queue_insert_prev(&free_cyccb, ((QUEUE *) &(p_cyccb->tmevtb)));
+		ercd = E_OK;
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_DEL_CYC_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_del_cyc */
 
 /*
  *  周期通知の動作開始
@@ -144,17 +297,22 @@ sta_cyc(ID cycid)
 	p_cyccb = get_cyccb(cycid);
 
 	lock_cpu();
-	if (p_cyccb->cycsta) {
-		tmevtb_dequeue(&(p_cyccb->tmevtb));
+	if (p_cyccb->p_cycinib->cycatr == TA_NOEXS) {
+		ercd = E_NOEXS;
 	}
 	else {
-		p_cyccb->cycsta = true;
+		if (p_cyccb->cycsta) {
+			tmevtb_dequeue(&(p_cyccb->tmevtb));
+		}
+		else {
+			p_cyccb->cycsta = true;
+		}
+		/*
+		 *  初回の起動のためのタイムイベントを登録する［ASPD1036］．
+		 */
+		tmevtb_enqueue(&(p_cyccb->tmevtb), p_cyccb->p_cycinib->cycphs);
+		ercd = E_OK;
 	}
-	/*
-	 *  初回の起動のためのタイムイベントを登録する［ASPD1036］．
-	 */
-	tmevtb_enqueue(&(p_cyccb->tmevtb), p_cyccb->p_cycinib->cycphs);
-	ercd = E_OK;
 	unlock_cpu();
 
   error_exit:
@@ -181,11 +339,16 @@ stp_cyc(ID cycid)
 	p_cyccb = get_cyccb(cycid);
 
 	lock_cpu();
-	if (p_cyccb->cycsta) {
-		p_cyccb->cycsta = false;
-		tmevtb_dequeue(&(p_cyccb->tmevtb));
+	if (p_cyccb->p_cycinib->cycatr == TA_NOEXS) {
+		ercd = E_NOEXS;
 	}
-	ercd = E_OK;
+	else {
+		if (p_cyccb->cycsta) {
+			p_cyccb->cycsta = false;
+			tmevtb_dequeue(&(p_cyccb->tmevtb));
+		}
+		ercd = E_OK;
+	}
 	unlock_cpu();
 
   error_exit:
@@ -212,14 +375,19 @@ ref_cyc(ID cycid, T_RCYC *pk_rcyc)
 	p_cyccb = get_cyccb(cycid);
 
 	lock_cpu();
-	if (p_cyccb->cycsta) {
-		pk_rcyc->cycstat = TCYC_STA;
-		pk_rcyc->lefttim = tmevt_lefttim(&(p_cyccb->tmevtb));
+	if (p_cyccb->p_cycinib->cycatr == TA_NOEXS) {
+		ercd = E_NOEXS;
 	}
 	else {
-		pk_rcyc->cycstat = TCYC_STP;
+		if (p_cyccb->cycsta) {
+			pk_rcyc->cycstat = TCYC_STA;
+			pk_rcyc->lefttim = tmevt_lefttim(&(p_cyccb->tmevtb));
+		}
+		else {
+			pk_rcyc->cycstat = TCYC_STP;
+		}
+		ercd = E_OK;
 	}
-	ercd = E_OK;
 	unlock_cpu();
 
   error_exit:

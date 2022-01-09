@@ -47,6 +47,7 @@
 class AlarmObject < KernelObject
   def initialize()
     super("alm", "alarm")
+    @inibList["T_NFYINFO"] = "aalm_nfyinfo_table"
   end
 
   def prepare(key, params)

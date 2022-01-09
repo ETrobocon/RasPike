@@ -1,6 +1,9 @@
 # startup.c
 kerflg
 exit_kernel
+initialize_kmm
+kernel_malloc
+kernel_free
 
 # task.c
 p_runtsk
@@ -9,6 +12,7 @@ enadsp
 dspflg
 ready_queue
 ready_primap
+free_tcb
 initialize_task
 search_schedtsk
 make_runnable
@@ -53,13 +57,16 @@ tmevt_lefttim
 signal_time
 
 # semaphore.c
+free_semcb
 initialize_semaphore
 
 # eventflag.c
+free_flgcb
 initialize_eventflag
 check_flg_cond
 
 # dataqueue.c
+free_dtqcb
 initialize_dataqueue
 enqueue_data
 force_enqueue_data
@@ -69,6 +76,7 @@ force_send_data
 receive_data
 
 # pridataq.c
+free_pdqcb
 initialize_pridataq
 enqueue_pridata
 dequeue_pridata
@@ -76,6 +84,7 @@ send_pridata
 receive_pridata
 
 # mutex.c
+free_mtxcb
 initialize_mutex
 mutex_check_ceilpri
 mutex_scan_ceilmtx
@@ -85,18 +94,28 @@ mutex_release
 mutex_release_all
 
 # mempfix.c
+free_mpfcb
 initialize_mempfix
 get_mpf_block
 
+# time_manage.c
+check_nfyinfo
+notify_handler
+
 # cyclic.c
+free_cyccb
 initialize_cyclic
 call_cyclic
 
 # alarm.c
+free_almcb
 initialize_alarm
 call_alarm
 
 # interrupt.c
+free_isrcb
+initialize_isr
+call_isr
 initialize_interrupt
 
 # exception.c
@@ -107,33 +126,62 @@ initialize_object
 call_inirtn
 call_terrtn
 tmax_tskid
+tmax_stskid
 tinib_table
+atinib_table
 torder_table
 tcb_table
 tmax_semid
+tmax_ssemid
 seminib_table
+aseminib_table
 semcb_table
 tmax_flgid
+tmax_sflgid
 flginib_table
+aflginib_table
 flgcb_table
 tmax_dtqid
+tmax_sdtqid
 dtqinib_table
+adtqinib_table
 dtqcb_table
 tmax_pdqid
+tmax_spdqid
 pdqinib_table
+apdqinib_table
 pdqcb_table
 tmax_mtxid
+tmax_smtxid
 mtxinib_table
+amtxinib_table
 mtxcb_table
 tmax_mpfid
+tmax_smpfid
 mpfinib_table
+ampfinib_table
 mpfcb_table
 tmax_cycid
+tmax_scycid
 cycinib_table
+acycinib_table
+acyc_nfyinfo_table
 cyccb_table
 tmax_almid
+tmax_salmid
 alminib_table
+aalminib_table
+aalm_nfyinfo_table
 almcb_table
+tnum_isr_queue
+isr_queue_list
+isr_queue_table
+tmax_isrid
+tmax_sisrid
+isrinib_table
+aisrinib_table
+isrorder_table
+isrcb_table
 tnum_def_inhno
 inhinib_table
 tnum_cfg_intno
@@ -144,5 +192,7 @@ tmevt_heap
 istksz
 istk
 istkpt
+kmmsz
+kmm
 
 INCLUDE "target"

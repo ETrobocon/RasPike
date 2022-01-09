@@ -1,7 +1,11 @@
 #ifndef _VDEV_H_
 #define _VDEV_H_
 
-#define VDEV_BASE			0x090F0000
+
+extern unsigned char athrill_vdev_mem[];
+
+//#define VDEV_BASE			0x090F0000
+#define VDEV_BASE 		((unsigned int)(athrill_vdev_mem))
 
 #define VDEV_RX_DATA_BASE	VDEV_BASE
 #define VDEV_RX_DATA_SIZE	0x1000

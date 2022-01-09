@@ -45,32 +45,9 @@
 #
 
 #
-#  kernel_cfg.hの生成
-#
-$kernelCfgH.add("#define TNUM_ISRID\t#{$cfgData[:CRE_ISR].size}")
-
-$cfgData[:CRE_ISR].sort.each do |key, params|
-  $kernelCfgH.add("#define #{params[:isrid]}\t#{params[:isrid].val}")
-end
-$kernelCfgH.add()
-
-#
 #  kernel_cfg.cの生成
 #
 $kernelCfgC.comment_header("Interrupt Management Functions")
-
-#
-#  トレースログマクロのデフォルト定義
-#
-$kernelCfgC.add(<<EOS)
-#ifndef LOG_ISR_ENTER
-#define LOG_ISR_ENTER(isrid)
-#endif /* LOG_ISR_ENTER */
-
-#ifndef LOG_ISR_LEAVE
-#define LOG_ISR_LEAVE(isrid)
-#endif /* LOG_ISR_LEAVE */
-EOS
 
 #
 #  CRE_ISRで使用できる割込み番号とそれに対応する割込みハンドラ番号のデ
@@ -218,7 +195,7 @@ $cfgData[:DEF_INH].each do |key, params|
 end
 
 #
-#  割込みサービスルーチン（ISR）に関するエラーチェックと割込みハンドラの生成
+#  割込みサービスルーチン（ISR）に関するエラーチェック
 #
 $cfgData[:CRE_ISR].sort.each do |key, params|
   #	isratrが無効の場合（E_RSATR）［NGKI2998］
@@ -275,37 +252,96 @@ $INTNO_CREISR_VALID.each do |intnoVal|
 						"%%intno with CFG_INT in higher than TMIN_INTPRI")
       end
     end
-
-    # 次のDEF_INHに相当するデータを生成
-    # DEF_INH(inhno, { TA_NULL, _kernel_inthdr_<intno> } );
-    $cfgData[:DEF_INH][inhnoVal] = {
-      inhno: NumStr.new(inhnoVal),
-      inhatr: NumStr.new($TA_NULL, "TA_NULL"),
-      inthdr: "_kernel_inthdr_#{intnoVal}"
-    }
-
-    # 割込みサービスルーチン用の割込みハンドラ
-    $kernelCfgC.add("void")
-    $kernelCfgC.add("_kernel_inthdr_#{intnoVal}(void)")
-    $kernelCfgC.add("{")
-    # 割込みサービスルーチンを優先度順に呼び出す
-    i = 0		# stable sortを行うための変数
-    isrParamsList.sort_by {|params| [ params[:isrpri].val, i += 1 ]} \
-										.each_with_index do |params, index|
-      if index > 0
-        $kernelCfgC.add
-        $kernelCfgC.add("\tif (sense_lock()) {")
-        $kernelCfgC.add("\t\tunlock_cpu();")
-        $kernelCfgC.add2("\t}")
-      end
-      $kernelCfgC.add("\tLOG_ISR_ENTER(#{params[:isrid]});")
-      $kernelCfgC.add("\t((ISR)(#{params[:isr]}))" \
-						"((intptr_t)(#{params[:exinf]}));")
-      $kernelCfgC.add("\tLOG_ISR_LEAVE(#{params[:isrid]});")
-    end
-    $kernelCfgC.add2("}")
   end
 end
+
+#
+#  割込みサービスルーチン（ISR）管理のデータ構造
+#
+intnoIsrList = []
+$INTNO_CREISR_VALID.each do |intnoVal|
+  inhnoVal = $toInhnoVal[intnoVal]
+  if $cfgData[:CFG_INT].has_key?(intnoVal) \
+							&& !$cfgData[:DEF_INH].has_key?(inhnoVal)
+    intnoIsrList.push(intnoVal)
+  end
+end
+
+intnoIsrList.sort!
+$isrQueueHeader = {}
+intnoIsrList.each_with_index do |intnoVal, index|
+  $isrQueueHeader[intnoVal] = "&(_kernel_isr_queue_table[#{index}])"
+end
+
+$kernelCfgC.add2("const uint_t _kernel_tnum_isr_queue = #{intnoIsrList.size};")
+
+if intnoIsrList.size > 0
+  $kernelCfgC.add("const ISR_ENTRY _kernel_isr_queue_list" \
+										"[#{intnoIsrList.size}] = {")
+  intnoIsrList.each_with_index do |intnoVal, index|
+    $kernelCfgC.add(",") if index > 0
+    $kernelCfgC.append("\t{ #{intnoVal}, #{$isrQueueHeader[intnoVal]} }")
+  end
+  $kernelCfgC.add
+  $kernelCfgC.add2("};")
+  $kernelCfgC.add2("QUEUE _kernel_isr_queue_table[#{intnoIsrList.size}];")
+else
+  $kernelCfgC.add("TOPPERS_EMPTY_LABEL(const ISR_ENTRY, " \
+											"_kernel_isr_queue_list);")
+  $kernelCfgC.add2("TOPPERS_EMPTY_LABEL(QUEUE, _kernel_isr_queue_table);")
+end
+
+#
+#  割込みサービスルーチン（ISR）呼出しのための割込みハンドラ
+#
+intnoIsrList.each do |intnoVal|
+  inhnoVal = $toInhnoVal[intnoVal]
+
+  # 次のDEF_INHに相当するデータを生成
+  # DEF_INH(inhno, { TA_NULL, _kernel_inthdr_<intno> } );
+  $cfgData[:DEF_INH][inhnoVal] = {
+    inhno: NumStr.new(inhnoVal),
+    inhatr: NumStr.new($TA_NULL, "TA_NULL"),
+    inthdr: "_kernel_inthdr_#{intnoVal}"
+  }
+
+  # 割込みサービスルーチン用の割込みハンドラ
+  $kernelCfgC.add("void")
+  $kernelCfgC.add("_kernel_inthdr_#{intnoVal}(void)")
+  $kernelCfgC.add("{")
+  $kernelCfgC.add("\t_kernel_call_isr(#{$isrQueueHeader[intnoVal]});");
+  $kernelCfgC.add2("}")
+end
+
+#
+#  割込みサービスルーチンに関する一般的な情報の生成
+#
+class IsrObject < KernelObject
+  def initialize()
+    super("isr", "isr")
+  end
+
+  def prepare(key, params)
+    # エラーチェックは実施済みなので，ここでの処理は不要
+  end
+
+  def generateInib(key, params)
+    return("(#{params[:isratr]}), (intptr_t)(#{params[:exinf]}), " \
+						"(#{$isrQueueHeader[params[:intno].val]}), " \
+						"(ISR)(#{params[:isr]}), (#{params[:isrpri]})")
+  end
+end
+IsrObject.new.generate()
+
+# 割込みサービスルーチン生成順序テーブルの生成
+$kernelCfgC.add("const ID _kernel_isrorder_table[TNUM_SISRID] = { ")
+$kernelCfgC.append("\t")
+$cfgData[:CRE_ISR].each_with_index do |(key, params), index|
+  $kernelCfgC.append(", ") if index > 0
+  $kernelCfgC.append("#{params[:isrid]}")
+end
+$kernelCfgC.add
+$kernelCfgC.add2("};")
 
 #
 #  割込みハンドラのための標準的な初期化情報の生成

@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: interrupt.c 788 2017-04-01 07:25:17Z ertl-hiro $
+ *  $Id: interrupt.c 801 2017-07-20 16:07:56Z ertl-hiro $
  */
 
 /*
@@ -52,6 +52,30 @@
 /*
  *  トレースログマクロのデフォルト定義
  */
+#ifndef LOG_ISR_ENTER
+#define LOG_ISR_ENTER(isrid)
+#endif /* LOG_ISR_ENTER */
+
+#ifndef LOG_ISR_LEAVE
+#define LOG_ISR_LEAVE(isrid)
+#endif /* LOG_ISR_LEAVE */
+
+#ifndef LOG_ACRE_ISR_ENTER
+#define LOG_ACRE_ISR_ENTER(pk_cisr)
+#endif /* LOG_ACRE_ISR_ENTER */
+
+#ifndef LOG_ACRE_ISR_LEAVE
+#define LOG_ACRE_ISR_LEAVE(ercd)
+#endif /* LOG_ACRE_ISR_LEAVE */
+
+#ifndef LOG_DEL_ISR_ENTER
+#define LOG_DEL_ISR_ENTER(isrid)
+#endif /* LOG_DEL_ISR_ENTER */
+
+#ifndef LOG_DEL_ISR_LEAVE
+#define LOG_DEL_ISR_LEAVE(ercd)
+#endif /* LOG_DEL_ISR_LEAVE */
+
 #ifndef LOG_DIS_INT_ENTER
 #define LOG_DIS_INT_ENTER(intno)
 #endif /* LOG_DIS_INT_ENTER */
@@ -138,6 +162,236 @@
 #define VALID_INTPRI_CHGIPM(intpri)	\
 					(TMIN_INTPRI <= (intpri) && (intpri) <= TIPM_ENAALL)
 #endif /* VALID_INTPRI_CHGIPM */
+
+/*
+ *  割込みサービスルーチンの数
+ */
+#define tnum_isr	((uint_t)(tmax_isrid - TMIN_ISRID + 1))
+#define tnum_sisr	((uint_t)(tmax_sisrid - TMIN_ISRID + 1))
+
+/*
+ *  割込みサービスルーチンIDから割込みサービスルーチン管理ブロックを取
+ *  り出すためのマクロ
+ */
+#define INDEX_ISR(isrid)	((uint_t)((isrid) - TMIN_ISRID))
+#define get_isrcb(isrid)	(&(isrcb_table[INDEX_ISR(isrid)]))
+
+/*
+ *  割込みサービスルーチンキューへの登録
+ */
+Inline void
+enqueue_isr(QUEUE *p_isr_queue, ISRCB *p_isrcb)
+{
+	QUEUE	*p_entry;
+	PRI		isrpri = p_isrcb->p_isrinib->isrpri;
+
+	for (p_entry = p_isr_queue->p_next; p_entry != p_isr_queue;
+											p_entry = p_entry->p_next) {
+		if (isrpri < ((ISRCB *) p_entry)->p_isrinib->isrpri) {
+			break;
+		}
+	}
+	queue_insert_prev(p_entry, &(p_isrcb->isr_queue));
+}
+
+#ifdef TOPPERS_isrini
+
+/*
+ *  使用していない割込みサービスルーチン管理ブロックのリスト
+ */
+QUEUE	free_isrcb;
+
+/* 
+ *  割込みサービスルーチン機能の初期化
+ */
+void
+initialize_isr(void)
+{
+	uint_t	i, j;
+	ISRCB	*p_isrcb;
+	ISRINIB	*p_isrinib;
+
+	for (i = 0; i < tnum_isr_queue; i++) {
+		queue_initialize(&(isr_queue_table[i]));
+	}
+	for (i = 0; i < tnum_sisr; i++) {
+		j = INDEX_ISR(isrorder_table[i]);
+		p_isrcb = &(isrcb_table[j]);
+		p_isrcb->p_isrinib = &(isrinib_table[j]);
+		enqueue_isr(p_isrcb->p_isrinib->p_isr_queue, p_isrcb);
+	}
+	queue_initialize(&free_isrcb);
+	for (j = 0; i < tnum_isr; i++, j++) {
+		p_isrcb = &(isrcb_table[i]);
+		p_isrinib = &(aisrinib_table[j]);
+		p_isrinib->isratr = TA_NOEXS;
+		p_isrcb->p_isrinib = ((const ISRINIB *) p_isrinib);
+		queue_insert_prev(&free_isrcb, &(p_isrcb->isr_queue));
+	}
+}
+
+#endif /* TOPPERS_isrini */
+
+/*
+ *  割込みサービスルーチンの呼出し
+ */
+#ifdef TOPPERS_isrcal
+
+void
+call_isr(QUEUE *p_isr_queue)
+{
+	QUEUE	*p_queue;
+	ISRCB	*p_isrcb;
+
+	for (p_queue = p_isr_queue->p_next; p_queue != p_isr_queue;
+											p_queue = p_queue->p_next) {
+		p_isrcb = (ISRCB *) p_queue;
+		LOG_ISR_ENTER(ISRID(p_isrcb));
+		(*(p_isrcb->p_isrinib->isr))(p_isrcb->p_isrinib->exinf);
+		LOG_ISR_LEAVE(ISRID(p_isrcb));
+
+		if (p_queue->p_next != p_isr_queue) {
+			/* ISRの呼出し前の状態に戻す */
+			if (sense_lock()) {
+				unlock_cpu();
+			}
+		}
+	}
+}
+
+#endif /* TOPPERS_isrcal */
+
+/*
+ *  割込みサービスルーチン呼出しキューの検索
+ */
+Inline QUEUE *
+search_isr_queue(INTNO intno)
+{
+	int_t	left, right, i;
+
+	if (tnum_isr_queue == 0) {
+		return(NULL);
+	}
+
+	left = 0;
+	right = tnum_isr_queue - 1;
+	while (left < right) {
+		i = (left + right + 1) / 2;
+		if (intno < isr_queue_list[i].intno) {
+			right = i - 1;
+		}
+		else {
+			left = i;
+		}
+	}
+	if (isr_queue_list[left].intno == intno) {
+		return(isr_queue_list[left].p_isr_queue);
+	}
+	else {
+		return(NULL);
+	}
+}
+
+/*
+ *  割込みサービスルーチンの生成
+ *
+ *  pk_cisr->exinfは，エラーチェックをせず，一度しか参照しないため，ロー
+ *  カル変数にコピーする必要がない（途中で書き換わっても支障がない）．
+ */
+#ifdef TOPPERS_acre_isr
+
+ER_UINT
+acre_isr(const T_CISR *pk_cisr)
+{
+	ISRCB		*p_isrcb;
+	ISRINIB		*p_isrinib;
+	QUEUE		*p_isr_queue;
+	ATR			isratr;
+	INTNO		intno;
+	ISR			isr;
+	PRI			isrpri;
+	ER			ercd;
+
+	LOG_ACRE_ISR_ENTER(pk_cisr);
+	CHECK_TSKCTX_UNL();
+
+	isratr = pk_cisr->isratr;
+	intno = pk_cisr->intno;
+	isr = pk_cisr->isr;
+	isrpri = pk_cisr->isrpri;
+
+	CHECK_RSATR(isratr, TARGET_ISRATR);
+	CHECK_PAR(VALID_INTNO_CREISR(intno));
+	CHECK_PAR(FUNC_ALIGN(isr));
+	CHECK_PAR(FUNC_NONNULL(isr));
+	CHECK_PAR(VALID_ISRPRI(isrpri));
+
+	p_isr_queue = search_isr_queue(intno);
+	CHECK_OBJ(p_isr_queue != NULL);
+
+	lock_cpu();
+	if (tnum_isr == 0 || queue_empty(&free_isrcb)) {
+		ercd = E_NOID;
+	}
+	else {
+		p_isrcb = ((ISRCB *) queue_delete_next(&free_isrcb));
+		p_isrinib = (ISRINIB *)(p_isrcb->p_isrinib);
+		p_isrinib->isratr = isratr;
+		p_isrinib->exinf = pk_cisr->exinf;
+		p_isrinib->p_isr_queue = p_isr_queue;
+		p_isrinib->isr = isr;
+		p_isrinib->isrpri = isrpri;
+		enqueue_isr(p_isr_queue, p_isrcb);
+		ercd = ISRID(p_isrcb);
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_ACRE_ISR_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_acre_isr */
+
+/*
+ *  割込みサービスルーチンの削除
+ */
+#ifdef TOPPERS_del_isr
+
+ER
+del_isr(ID isrid)
+{
+	ISRCB	*p_isrcb;
+	ISRINIB	*p_isrinib;
+	ER		ercd;
+
+	LOG_DEL_ISR_ENTER(isrid);
+	CHECK_TSKCTX_UNL();
+	CHECK_ID(VALID_ISRID(isrid));
+	p_isrcb = get_isrcb(isrid);
+
+	lock_cpu();
+	if (p_isrcb->p_isrinib->isratr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (isrid <= tmax_sisrid) {
+		ercd = E_OBJ;
+	}
+	else {
+		queue_delete(&(p_isrcb->isr_queue));
+		p_isrinib = (ISRINIB *)(p_isrcb->p_isrinib);
+		p_isrinib->isratr = TA_NOEXS;
+		queue_insert_prev(&free_isrcb, &(p_isrcb->isr_queue));
+		ercd = E_OK;
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_DEL_ISR_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_del_isr */
 
 /* 
  *  割込み管理機能の初期化

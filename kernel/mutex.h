@@ -88,14 +88,21 @@ typedef struct mutex_waiting_information {
 } WINFO_MTX;
 
 /*
+ *  使用していないミューテックス管理ブロックのリスト
+ */
+extern QUEUE	free_mtxcb;
+
+/*
  *  ミューテックスIDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_mtxid;
+extern const ID	tmax_smtxid;
 
 /*
  *  ミューテックス初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const MTXINIB	mtxinib_table[];
+extern MTXINIB			amtxinib_table[];
 
 /*
  *  ミューテックス管理ブロックのエリア（kernel_cfg.c）

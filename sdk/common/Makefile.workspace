@@ -69,7 +69,7 @@ else
 img: $(APPLDIR) prepare-obj-folder
 endif
 	(cd $(OBJDIR) && \
-	make offset.h kernel_cfg.h && \
+	make kernel_cfg.h && \
 	make -j8 > /dev/null ) && \
 	cp $(OBJDIR)/$(OBJFILENAME) $(PWD) && \
 	echo "$(APPLDIR)" > $(PWD)/appdir

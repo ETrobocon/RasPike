@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: interrupt.h 356 2015-07-25 10:44:32Z ertl-hiro $
+ *  $Id: interrupt.h 613 2016-02-08 04:29:27Z ertl-hiro $
  */
 
 /*
@@ -48,6 +48,92 @@
 #define TOPPERS_INTERRUPT_H
 
 #include "kernel_impl.h"
+#include <queue.h>
+
+/*
+ *  割込みサービスルーチン初期化ブロック
+ */
+typedef struct isr_initialization_block {
+	ATR			isratr;			/* 割込みサービスルーチン属性 */
+	intptr_t	exinf;			/* 割込みサービスルーチンの拡張情報 */
+	QUEUE		*p_isr_queue;	/* 登録先割込みサービスルーチン呼出しキュー */
+	ISR			isr;			/* 割込みサービスルーチンの先頭番地 */
+	PRI			isrpri;			/* 割込みサービスルーチン優先度 */
+} ISRINIB;
+
+/*
+ *  割込みサービスルーチン管理ブロック
+ */
+typedef struct isr_control_block {
+	QUEUE		isr_queue;		/* 割込みサービスルーチン呼出しキュー */
+	const ISRINIB *p_isrinib;	/* 初期化ブロックへのポインタ */
+} ISRCB;
+
+/*
+ *  割込みサービスルーチン呼出しキューを検索するためのデータ構造
+ */
+typedef struct {
+	INTNO		intno;			/* 割込み番号 */
+	QUEUE		*p_isr_queue;	/* 割込みサービスルーチン呼出しキュー */
+} ISR_ENTRY;
+
+/*
+ *  割込みサービスルーチン呼出しキューのエントリ数（kernel_cfg.c）
+ */
+extern const uint_t tnum_isr_queue;
+
+/*
+ *  割込みサービスルーチン呼出しキューリスト（kernel_cfg.c）
+ */
+extern const ISR_ENTRY isr_queue_list[];
+
+/*
+ *  割込みサービスルーチン呼出しキューのエリア（kernel_cfg.c）
+ */
+extern QUEUE isr_queue_table[];
+
+/*
+ *  使用していない割込みサービスルーチン管理ブロックのリスト
+ */
+extern QUEUE	free_isrcb;
+
+/*
+ *  割込みサービスルーチンIDの最大値（kernel_cfg.c）
+ */
+extern const ID	tmax_isrid;
+extern const ID	tmax_sisrid;
+
+/*
+ *  割込みサービスルーチン初期化ブロックのエリア（kernel_cfg.c）
+ */
+extern const ISRINIB	isrinib_table[];
+extern ISRINIB			aisrinib_table[];
+
+/*
+ *  割込みサービスルーチン生成順序テーブル（kernel_cfg.c）
+ */
+extern const ID	isrorder_table[];
+
+/*
+ *  割込みサービスルーチン管理ブロックのエリア（kernel_cfg.c）
+ */
+extern ISRCB	isrcb_table[];
+
+/*
+ *  割込みサービスルーチン管理ブロックから割込みサービスルーチンIDを取
+ *  り出すためのマクロ
+ */
+#define	ISRID(p_isrcb)	((ID)(((p_isrcb) - isrcb_table) + TMIN_ISRID))
+
+/*
+ *  割込みサービスルーチン機能の初期化
+ */
+extern void initialize_isr(void);
+
+/*
+ *  割込みサービスルーチンの呼出し
+ */
+extern void call_isr(QUEUE *p_isr_queue);
 
 #if !defined(OMIT_INITIALIZE_INTERRUPT) || defined(USE_INHINIB_TABLE)
 

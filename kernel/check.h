@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: check.h 788 2017-04-01 07:25:17Z ertl-hiro $
+ *  $Id: check.h 801 2017-07-20 16:07:56Z ertl-hiro $
  */
 
 /*
@@ -61,11 +61,17 @@
 #define VALID_MPFID(mpfid)	(TMIN_MPFID <= (mpfid) && (mpfid) <= tmax_mpfid)
 #define VALID_CYCID(cycid)	(TMIN_CYCID <= (cycid) && (cycid) <= tmax_cycid)
 #define VALID_ALMID(almid)	(TMIN_ALMID <= (almid) && (almid) <= tmax_almid)
+#define VALID_ISRID(isrid)	(TMIN_ISRID <= (isrid) && (isrid) <= tmax_isrid)
 
 /*
  *  優先度の範囲の判定
  */
 #define VALID_TPRI(tpri)	(TMIN_TPRI <= (tpri) && (tpri) <= TMAX_TPRI)
+
+#define VALID_DPRI(dpri)	(TMIN_DPRI <= (dpri) && (dpri) <= TMAX_DPRI)
+
+#define VALID_ISRPRI(isrpri) \
+				(TMIN_ISRPRI <= (isrpri) && (isrpri) <= TMAX_ISRPRI)
 
 /*
  *  相対時間の範囲の判定
@@ -77,6 +83,62 @@
  */
 #define VALID_TMOUT(tmout)	((tmout) <= TMAX_RELTIM || (tmout) == TMO_FEVR \
 													|| (tmout) == TMO_POL)
+
+/*
+ *  アラインしているかの判定
+ */
+#define ALIGNED(val, align)		((((uintptr_t)(val)) & ((align) - 1U)) == 0U)
+
+#ifdef CHECK_STKSZ_ALIGN
+#define STKSZ_ALIGN(stksz)		ALIGNED(stksz, CHECK_STKSZ_ALIGN)
+#else /* CHECK_STKSZ_ALIGN */
+#define STKSZ_ALIGN(stksz)		true
+#endif /* CHECK_STKSZ_ALIGN */
+
+#ifdef CHECK_INTPTR_ALIGN
+#define INTPTR_ALIGN(p_var)		ALIGNED(p_var, CHECK_INTPTR_ALIGN)
+#else /* CHECK_INTPTR_ALIGN */
+#define INTPTR_ALIGN(p_var)		true
+#endif /* CHECK_INTPTR_ALIGN */
+
+#ifdef CHECK_FUNC_ALIGN
+#define FUNC_ALIGN(func)		ALIGNED(func, CHECK_FUNC_ALIGN)
+#else /* CHECK_FUNC_ALIGN */
+#define FUNC_ALIGN(func)		true
+#endif /* CHECK_FUNC_ALIGN */
+
+#ifdef CHECK_STACK_ALIGN
+#define STACK_ALIGN(stack)		ALIGNED(stack, CHECK_STACK_ALIGN)
+#else /* CHECK_STACK_ALIGN */
+#define STACK_ALIGN(stack)		true
+#endif /* CHECK_STACK_ALIGN */
+
+#ifdef CHECK_MPF_ALIGN
+#define MPF_ALIGN(mpf)			ALIGNED(mpf, CHECK_MPF_ALIGN)
+#else /* CHECK_MPF_ALIGN */
+#define MPF_ALIGN(mpf)			true
+#endif /* CHECK_MPF_ALIGN */
+
+#ifdef CHECK_MB_ALIGN
+#define MB_ALIGN(mb)			ALIGNED(mb, CHECK_MB_ALIGN)
+#else /* CHECK_MB_ALIGN */
+#define MB_ALIGN(mb)			true
+#endif /* CHECK_MB_ALIGN */
+
+/*
+ *  NULLでないことの判定
+ */
+#ifdef CHECK_INTPTR_NONNULL
+#define INTPTR_NONNULL(p_var)	((p_var) != NULL)
+#else /* CHECK_INTPTR_NONNULL */
+#define INTPTR_NONNULL(p_var)	true
+#endif /* CHECK_INTPTR_NONNULL */
+
+#ifdef CHECK_FUNC_NONNULL
+#define FUNC_NONNULL(func)		((func) != NULL)
+#else /* CHECK_FUNC_NONNULL */
+#define FUNC_NONNULL(func)		true
+#endif /* CHECK_FUNC_NONNULL */
 
 /*
  *  呼出しコンテキストのチェック（E_CTX）
@@ -139,6 +201,16 @@
 } while (false)
 
 /*
+ *  予約属性エラーのチェック（E_RSATR）
+ */
+#define CHECK_RSATR(atr, valid_atr) do {					\
+	if (((atr) & ~(valid_atr)) != 0U) {						\
+		ercd = E_RSATR;										\
+		goto error_exit;									\
+	}														\
+} while (false)
+
+/*
  *  パラメータエラーのチェック（E_PAR）
  */
 #define CHECK_PAR(exp) do {									\
@@ -154,6 +226,16 @@
 #define CHECK_ILUSE(exp) do {								\
 	if (!(exp)) {											\
 		ercd = E_ILUSE;										\
+		goto error_exit;									\
+	}														\
+} while (false)
+
+/*
+ *  静的なオブジェクト状態エラーのチェック（E_OBJ）
+ */
+#define CHECK_OBJ(exp) do {									\
+	if (!(exp)) {											\
+		ercd = E_OBJ;										\
 		goto error_exit;									\
 	}														\
 } while (false)

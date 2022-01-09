@@ -94,14 +94,21 @@ typedef struct eventflag_waiting_information {
 } WINFO_FLG;
 
 /*
+ *  使用していないイベントフラグ管理ブロックのリスト
+ */
+extern QUEUE	free_flgcb;
+
+/*
  *  イベントフラグIDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_flgid;
+extern const ID	tmax_sflgid;
 
 /*
  *  イベントフラグ初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const FLGINIB	flginib_table[];
+extern FLGINIB			aflginib_table[];
 
 /*
  *  イベントフラグ管理ブロックのエリア（kernel_cfg.c）

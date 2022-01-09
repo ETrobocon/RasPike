@@ -221,6 +221,8 @@ extern const sigset_t sigmask_disint_init;
 extern sigset_t	sigmask_intlock;	/* 割込みロックでマスクするシグナル */
 extern sigset_t	sigmask_cpulock;	/* CPUロックでマスクするシグナル */
 
+
+
 /*
  *  コンテキストの参照
  */
@@ -256,33 +258,12 @@ extern volatile sigset_t	sigmask_disint;	/* 個別にマスクしているシグ
  *  み禁止フラグ）を参照して，現在のシグナルマスクとsaved_sigmaskを適切
  *  な値に設定する．
  */
-Inline void
-set_sigmask(void)
-{
-	sigset_t	sigmask;
-
-	sigassignset(&sigmask, &(sigmask_table[-intpri_value]));
-	sigjoinset(&sigmask, &sigmask_disint);
-	if (sense_context()) {
-		sigaddset(&sigmask, SIGUSR2);
-	}
-	if (lock_flag) {
-		sigassignset(&saved_sigmask, &sigmask);
-		sigjoinset(&sigmask, &sigmask_cpulock);
-	}
-	sigprocmask(SIG_SETMASK, &sigmask, NULL);
-}
+extern void set_sigmask(void);
 
 /*
  *  CPUロック状態への移行
  */
-Inline void
-lock_cpu(void)
-{
-	assert(!lock_flag);
-	sigprocmask(SIG_BLOCK, &sigmask_cpulock, (sigset_t *) &saved_sigmask);
-	lock_flag = true;
-}
+extern  void lock_cpu(void);
 
 /*
  *  CPUロック状態への移行（ディスパッチできる状態）
@@ -292,13 +273,7 @@ lock_cpu(void)
 /*
  *  CPUロック状態の解除
  */
-Inline void
-unlock_cpu(void)
-{
-	assert(lock_flag);
-	lock_flag = false;
-	sigprocmask(SIG_SETMASK, (sigset_t *) &saved_sigmask, NULL);
-}
+  extern void unlock_cpu(void);
 
 /*
  *  CPUロック状態の解除（ディスパッチできる状態）
@@ -308,11 +283,7 @@ unlock_cpu(void)
 /*
  *  CPUロック状態の参照
  */
-Inline bool_t
-sense_lock(void)
-{
-	return(lock_flag);
-}
+extern bool_t sense_lock(void);
 
 /*
  *  割込みを受け付けるための遅延処理
@@ -325,21 +296,12 @@ delay_for_interrupt(void)
 /*
  *  割込み優先度マスクの設定
  */
-Inline void
-t_set_ipm(PRI intpri)
-{
-	intpri_value = intpri;
-	set_sigmask();
-}
+extern void t_set_ipm(PRI intpri);
 
 /*
  *  割込み優先度マスクの参照
  */
-Inline PRI
-t_get_ipm(void)
-{
-	return(intpri_value);
-}
+extern  PRI t_get_ipm(void);
 
 /*
  *  割込み番号の範囲の判定
@@ -350,32 +312,19 @@ t_get_ipm(void)
 /*
  *  割込み属性の設定のチェック
  */
-Inline bool_t
-check_intno_cfg(INTNO intno)
-{
-	return(!sigismember(&(sigmask_table[0]), intno)
-				&& sigismember(&(sigmask_table[7]), intno));
-}
+extern bool_t check_intno_cfg(INTNO intno);
 
 /*
  *  割込み要求禁止フラグのセット
  */
-Inline void
-disable_int(INTNO intno)
-{
-	sigaddset((sigset_t *)&sigmask_disint, intno);
-	set_sigmask();
-}
+extern void disable_int(INTNO intno);
 
 /*
  *  割込み要求禁止フラグのクリア
  */
-Inline void
-enable_int(INTNO intno)
-{
-	sigdelset((sigset_t *)&sigmask_disint, intno);
-	set_sigmask();
-}
+extern void enable_int(INTNO intno);
+
+#define x_clear_int(arg) 
 
 /*
  *  割込みが要求できる状態か？
@@ -398,14 +347,7 @@ raise_int(INTNO intno)
 /*
  *  割込み要求のチェック
  */
-Inline bool_t
-probe_int(INTNO intno)
-{
-	sigset_t	sigmask;
-
-	sigpending(&sigmask);
-	return(sigismember(&sigmask, intno));
-}
+extern bool_t probe_int(INTNO intno);
 
 /*
  *  最高優先順位タスクへのディスパッチ
@@ -693,6 +635,6 @@ extern void	target_exit(void) NoReturn;
  *  target_kernel_impl.cに，TLSF（オープンソースのメモリ管理ライブラリ）
  *  を用いたメモリ管理ルーチンを含めている．
  */
-#define OMIT_KMM_ALLOCONLY
+// #define OMIT_KMM_ALLOCONLY
 
 #endif /* TOPPERS_TARGET_KERNEL_IMPL_H */

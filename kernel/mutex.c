@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2005-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2016 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: mutex.c 471 2015-12-30 10:03:16Z ertl-hiro $
+ *  $Id: mutex.c 717 2016-03-31 07:03:53Z ertl-hiro $
  */
 
 /*
@@ -52,6 +52,22 @@
 /*
  *  トレースログマクロのデフォルト定義
  */
+#ifndef LOG_ACRE_MTX_ENTER
+#define LOG_ACRE_MTX_ENTER(pk_cmtx)
+#endif /* LOG_ACRE_MTX_ENTER */
+
+#ifndef LOG_ACRE_MTX_LEAVE
+#define LOG_ACRE_MTX_LEAVE(ercd)
+#endif /* LOG_ACRE_MTX_LEAVE */
+
+#ifndef LOG_DEL_MTX_ENTER
+#define LOG_DEL_MTX_ENTER(mtxid)
+#endif /* LOG_DEL_MTX_ENTER */
+
+#ifndef LOG_DEL_MTX_LEAVE
+#define LOG_DEL_MTX_LEAVE(ercd)
+#endif /* LOG_DEL_MTX_LEAVE */
+
 #ifndef LOG_LOC_MTX_ENTER
 #define LOG_LOC_MTX_ENTER(mtxid)
 #endif /* LOG_LOC_MTX_ENTER */
@@ -104,6 +120,7 @@
  *  ミューテックスの数
  */
 #define tnum_mtx	((uint_t)(tmax_mtxid - TMIN_MTXID + 1))
+#define tnum_smtx	((uint_t)(tmax_smtxid - TMIN_MTXID + 1))
 
 /*
  *  ミューテックスIDからミューテックス管理ブロックを取り出すためのマクロ
@@ -118,26 +135,40 @@
 #define MTXPROTO(p_mtxcb)		((p_mtxcb)->p_mtxinib->mtxatr & MTXPROTO_MASK)
 #define MTX_CEILING(p_mtxcb)	(MTXPROTO(p_mtxcb) == TA_CEILING)
 
+#ifdef TOPPERS_mtxini
+
+/*
+ *  使用していないミューテックス管理ブロックのリスト
+ */
+QUEUE	free_mtxcb;
+
 /* 
  *  ミューテックス機能の初期化
  */
-#ifdef TOPPERS_mtxini
-
 void
 initialize_mutex(void)
 {
-	uint_t	i;
+	uint_t	i, j;
 	MTXCB	*p_mtxcb;
+	MTXINIB	*p_mtxinib;
 
 	mtxhook_check_ceilpri = mutex_check_ceilpri;
 	mtxhook_scan_ceilmtx = mutex_scan_ceilmtx;
 	mtxhook_release_all = mutex_release_all;
 
-	for (i = 0; i < tnum_mtx; i++) {
+	for (i = 0; i < tnum_smtx; i++) {
 		p_mtxcb = &(mtxcb_table[i]);
 		queue_initialize(&(p_mtxcb->wait_queue));
 		p_mtxcb->p_mtxinib = &(mtxinib_table[i]);
 		p_mtxcb->p_loctsk = NULL;
+	}
+	queue_initialize(&free_mtxcb);
+	for (j = 0; i < tnum_mtx; i++, j++) {
+		p_mtxcb = &(mtxcb_table[i]);
+		p_mtxinib = &(amtxinib_table[j]);
+		p_mtxinib->mtxatr = TA_NOEXS;
+		p_mtxcb->p_mtxinib = ((const MTXINIB *) p_mtxinib);
+		queue_insert_prev(&free_mtxcb, &(p_mtxcb->wait_queue));
 	}
 }
 
@@ -323,6 +354,117 @@ mutex_release_all(TCB *p_tcb)
 #endif /* TOPPERS_mtxrela */
 
 /*
+ *  ミューテックスの生成［NGKI2022］
+ */
+#ifdef TOPPERS_acre_mtx
+
+ER_UINT
+acre_mtx(const T_CMTX *pk_cmtx)
+{
+	MTXCB	*p_mtxcb;
+	MTXINIB	*p_mtxinib;
+	ATR		mtxatr;
+	PRI		ceilpri;
+	ER		ercd;
+
+	LOG_ACRE_MTX_ENTER(pk_cmtx);
+	CHECK_TSKCTX_UNL();							/*［NGKI2023］［NGKI2024］*/
+
+	mtxatr = pk_cmtx->mtxatr;
+	ceilpri = pk_cmtx->ceilpri;
+
+	if (mtxatr == TA_CEILING) {
+		CHECK_PAR(VALID_TPRI(ceilpri));			/*［NGKI2037］*/
+	}
+	else {
+		CHECK_RSATR(mtxatr, TA_TPRI);			/*［NGKI2025］*/
+	}
+
+	lock_cpu();
+	if (tnum_mtx == 0 || queue_empty(&free_mtxcb)) {
+		ercd = E_NOID;							/*［NGKI2031］*/
+	}
+	else {
+		p_mtxcb = ((MTXCB *) queue_delete_next(&free_mtxcb));
+		p_mtxinib = (MTXINIB *)(p_mtxcb->p_mtxinib);
+		p_mtxinib->mtxatr = mtxatr;
+		p_mtxinib->ceilpri = INT_PRIORITY(ceilpri);
+
+		queue_initialize(&(p_mtxcb->wait_queue));
+		p_mtxcb->p_loctsk = NULL;				/*［NGKI2033］*/
+		ercd = MTXID(p_mtxcb);
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_ACRE_MTX_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_acre_mtx */
+
+/*
+ *  ミューテックスの削除［NGKI2056］
+ */
+#ifdef TOPPERS_del_mtx
+
+ER
+del_mtx(ID mtxid)
+{
+	MTXCB	*p_mtxcb, **pp_prevmtx;
+	MTXINIB	*p_mtxinib;
+	TCB		*p_loctsk;
+	ER		ercd;
+
+	LOG_DEL_MTX_ENTER(mtxid);
+	CHECK_TSKCTX_UNL();							/*［NGKI2057］［NGKI2058］*/
+	CHECK_ID(VALID_MTXID(mtxid));				/*［NGKI2059］*/
+	p_mtxcb = get_mtxcb(mtxid);
+
+	lock_cpu();
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;							/*［NGKI2060］*/
+	}
+	else if (mtxid <= tmax_smtxid) {
+		ercd = E_OBJ;							/*［NGKI2062］*/
+	}
+	else {
+		init_wait_queue(&(p_mtxcb->wait_queue));	/*［NGKI2065］*/
+		p_loctsk = p_mtxcb->p_loctsk;
+		if (p_loctsk != NULL) {
+			/*
+			 *  p_loctskがロックしているミューテックスのリストから対象
+			 *  ミュークスを削除し，必要な場合にはp_loctskの現在優先度
+			 *  を変更する［NGKI2064］．
+			 */
+			pp_prevmtx = &(p_loctsk->p_lastmtx);
+			while (*pp_prevmtx != NULL) {
+				if (*pp_prevmtx == p_mtxcb) {
+					*pp_prevmtx = p_mtxcb->p_prevmtx;
+					break;
+				}
+				pp_prevmtx = &((*pp_prevmtx)->p_prevmtx);
+			}
+			mutex_drop_priority(p_loctsk, p_mtxcb);
+		}
+		p_mtxinib = (MTXINIB *)(p_mtxcb->p_mtxinib);
+		p_mtxinib->mtxatr = TA_NOEXS;						/*［NGKI2063］*/
+		queue_insert_prev(&free_mtxcb, &(p_mtxcb->wait_queue));
+		if (p_runtsk != p_schedtsk) {
+			dispatch();
+		}
+		ercd = E_OK;
+	}
+	unlock_cpu();
+
+  error_exit:
+	LOG_DEL_MTX_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_del_mtx */
+
+/*
  *  ミューテックスのロック
  */
 #ifdef TOPPERS_loc_mtx
@@ -340,7 +482,10 @@ loc_mtx(ID mtxid)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu_dsp();
-	if (p_runtsk->raster) {
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (p_runtsk->raster) {
 		ercd = E_RASTER;
 	}
 	else if (MTX_CEILING(p_mtxcb)
@@ -391,7 +536,10 @@ ploc_mtx(ID mtxid)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu();
-	if (MTX_CEILING(p_mtxcb)
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (MTX_CEILING(p_mtxcb)
 				&& p_runtsk->bpriority < p_mtxcb->p_mtxinib->ceilpri) {
 		ercd = E_ILUSE;
 	}
@@ -439,7 +587,10 @@ tloc_mtx(ID mtxid, TMO tmout)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu_dsp();
-	if (p_runtsk->raster) {
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (p_runtsk->raster) {
 		ercd = E_RASTER;
 	}
 	else if (MTX_CEILING(p_mtxcb)
@@ -494,7 +645,10 @@ unl_mtx(ID mtxid)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu();
-	if (p_mtxcb != p_runtsk->p_lastmtx) {
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else if (p_mtxcb != p_runtsk->p_lastmtx) {
 		ercd = E_OBJ;
 	}
 	else {
@@ -533,24 +687,29 @@ ini_mtx(ID mtxid)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu();
-	init_wait_queue(&(p_mtxcb->wait_queue));
-	p_loctsk = p_mtxcb->p_loctsk;
-	if (p_loctsk != NULL) {
-		p_mtxcb->p_loctsk = NULL;
-		pp_prevmtx = &(p_loctsk->p_lastmtx);
-		while (*pp_prevmtx != NULL) {
-			if (*pp_prevmtx == p_mtxcb) {
-				*pp_prevmtx = p_mtxcb->p_prevmtx;
-				break;
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else {
+		init_wait_queue(&(p_mtxcb->wait_queue));
+		p_loctsk = p_mtxcb->p_loctsk;
+		if (p_loctsk != NULL) {
+			p_mtxcb->p_loctsk = NULL;
+			pp_prevmtx = &(p_loctsk->p_lastmtx);
+			while (*pp_prevmtx != NULL) {
+				if (*pp_prevmtx == p_mtxcb) {
+					*pp_prevmtx = p_mtxcb->p_prevmtx;
+					break;
+				}
+				pp_prevmtx = &((*pp_prevmtx)->p_prevmtx);
 			}
-			pp_prevmtx = &((*pp_prevmtx)->p_prevmtx);
+			mutex_drop_priority(p_loctsk, p_mtxcb);
 		}
-		mutex_drop_priority(p_loctsk, p_mtxcb);
+		if (p_runtsk != p_schedtsk) {
+			dispatch();
+		}
+		ercd = E_OK;
 	}
-	if (p_runtsk != p_schedtsk) {
-		dispatch();
-	}
-	ercd = E_OK;
 	unlock_cpu();
 
   error_exit:
@@ -577,10 +736,15 @@ ref_mtx(ID mtxid, T_RMTX *pk_rmtx)
 	p_mtxcb = get_mtxcb(mtxid);
 
 	lock_cpu();
-	pk_rmtx->htskid = (p_mtxcb->p_loctsk != NULL) ? TSKID(p_mtxcb->p_loctsk)
-													: TSK_NONE;
-	pk_rmtx->wtskid = wait_tskid(&(p_mtxcb->wait_queue));
-	ercd = E_OK;
+	if (p_mtxcb->p_mtxinib->mtxatr == TA_NOEXS) {
+		ercd = E_NOEXS;
+	}
+	else {
+		pk_rmtx->htskid = (p_mtxcb->p_loctsk != NULL) ? TSKID(p_mtxcb->p_loctsk)
+														: TSK_NONE;
+		pk_rmtx->wtskid = wait_tskid(&(p_mtxcb->wait_queue));
+		ercd = E_OK;
+	}
 	unlock_cpu();
 
   error_exit:

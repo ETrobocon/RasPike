@@ -109,7 +109,7 @@ end
 TaskObject.new.generate()
 
 # タスク生成順序テーブルの生成
-$kernelCfgC.add("const ID _kernel_torder_table[TNUM_TSKID] = { ")
+$kernelCfgC.add("const ID _kernel_torder_table[TNUM_STSKID] = { ")
 $kernelCfgC.append("\t")
 $cfgData[:CRE_TSK].each_with_index do |(key, params), index|
   $kernelCfgC.append(", ") if index > 0

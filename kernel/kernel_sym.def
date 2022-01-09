@@ -69,6 +69,7 @@ CHECK_STACK_ALIGN,,,defined(CHECK_STACK_ALIGN),1
 CHECK_STACK_NONNULL,true,bool,defined(CHECK_STACK_NONNULL)
 CHECK_MPF_ALIGN,,,defined(CHECK_MPF_ALIGN),1
 CHECK_MPF_NONNULL,true,bool,defined(CHECK_MPF_NONNULL)
+CHECK_MB_ALIGN,,,defined(CHECK_MB_ALIGN),1
 sizeof_void_ptr,sizeof(void*)
 sizeof_uint_t,sizeof(uint_t)
 sizeof_size_t,sizeof(size_t)
@@ -129,6 +130,12 @@ sizeof_ALMINIB,sizeof(ALMINIB)
 offsetof_ALMINIB_almatr,"offsetof(ALMINIB,almatr)"
 offsetof_ALMINIB_exinf,"offsetof(ALMINIB,exinf)"
 offsetof_ALMINIB_nfyhdr,"offsetof(ALMINIB,nfyhdr)"
+sizeof_ISRINIB,sizeof(ISRINIB)
+offsetof_ISRINIB_isratr,"offsetof(ISRINIB,isratr)"
+offsetof_ISRINIB_exinf,"offsetof(ISRINIB,exinf)"
+offsetof_ISRINIB_p_isr_queue,"offsetof(ISRINIB,p_isr_queue)"
+offsetof_ISRINIB_isr,"offsetof(ISRINIB,isr)"
+offsetof_ISRINIB_isrpri,"offsetof(ISRINIB,isrpri)"
 sizeof_INHINIB,sizeof(INHINIB),,!defined(OMIT_INITIALIZE_INTERRUPT)
 offset_INHINIB_inhno,"offsetof(INHINIB,inhno)",,!defined(OMIT_INITIALIZE_INTERRUPT)
 offset_INHINIB_inhatr,"offsetof(INHINIB,inhatr)",,!defined(OMIT_INITIALIZE_INTERRUPT),,

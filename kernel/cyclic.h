@@ -48,6 +48,7 @@
 #define TOPPERS_CYCLIC_H
 
 #include "kernel_impl.h"
+#include <queue.h>
 #include "time_event.h"
 
 /*
@@ -74,19 +75,36 @@ typedef struct cyclic_handler_control_block {
 } CYCCB;
 
 /*
+ *  使用していない周期通知管理ブロックのリスト
+ */
+extern QUEUE	free_cyccb;
+
+/*
  *  周期通知IDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_cycid;
+extern const ID	tmax_scycid;
 
 /*
  *  周期通知初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const CYCINIB	cycinib_table[];
+extern CYCINIB			acycinib_table[];
+
+/*
+ *  周期通知の通知方法の格納エリア（kernel_cfg.c）
+ */
+extern T_NFYINFO	acyc_nfyinfo_table[];
 
 /*
  *  周期通知管理ブロックのエリア（kernel_cfg.c）
  */
 extern CYCCB	cyccb_table[];
+
+/*
+ *  周期通知管理ブロックから周期通知IDを取り出すためのマクロ
+ */
+#define	CYCID(p_cyccb)	((ID)(((p_cyccb) - cyccb_table) + TMIN_CYCID))
 
 /*
  *  周期通知機能の初期化

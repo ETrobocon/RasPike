@@ -185,6 +185,9 @@ typedef struct mutex_control_block MTXCB;
  *  TCBを指すポインタを入れる方法の方が，RAMの節約の観点からは望ましい
  *  が，実行効率が悪くなるために採用していない．他のオブジェクトについ
  *  ても同様に扱う．
+ *
+ *  タスク初期化ブロックには，DEF_TEXで定義されるタスク例外処理ルーチ
+ *  ンに関する情報も含む．
  */
 typedef struct task_initialization_block {
 	ATR			tskatr;			/* タスク属性 */
@@ -317,14 +320,21 @@ extern QUEUE	ready_queue[TNUM_TPRI];
 extern uint16_t	ready_primap;
 
 /*
+ *  使用していないTCBのリスト
+ */
+extern QUEUE	free_tcb;
+
+/*
  *  タスクIDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_tskid;
+extern const ID	tmax_stskid;
 
 /*
  *  タスク初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const TINIB	tinib_table[];
+extern TINIB		atinib_table[];
 
 /*
  *  タスク生成順序テーブル（kernel_cfg.c）
@@ -340,6 +350,7 @@ extern TCB	tcb_table[];
  *  タスクの数
  */
 #define tnum_tsk	((uint_t)(tmax_tskid - TMIN_TSKID + 1))
+#define tnum_stsk	((uint_t)(tmax_stskid - TMIN_TSKID + 1))
 
 /*
  *  タスクIDからTCBを取り出すためのマクロ

@@ -101,6 +101,7 @@ sta_ker(void)
 	 *  タイムイベント管理モジュールは他のモジュールより先に初期化
 	 *  する必要がある．
 	 */
+	initialize_kmm();
 	initialize_tmevt();								/*［ASPD1061］*/
 	initialize_object();
 
@@ -183,3 +184,40 @@ exit_kernel(void)
 }
 
 #endif /* TOPPERS_ext_ker */
+
+/*
+ *  カーネルの割り付けるメモリ領域の管理
+ *
+ *  メモリ領域を先頭から順に割り当て，解放されたメモリ領域を再利用しな
+ *  いメモリ管理モジュール．
+ */
+#ifdef TOPPERS_kermem
+#ifndef OMIT_KMM_ALLOCONLY
+
+static void	*kmm_brk;
+
+void
+initialize_kmm(void)
+{
+	kmm_brk = ((char *) kmm) + kmmsz;
+}
+
+void *
+kernel_malloc(size_t size)
+{
+	if (((char *) kmm_brk) - ((char *) kmm) >= size) {
+		kmm_brk = ((char *) kmm_brk) - size;
+		return(kmm_brk);
+	}
+	else {
+		return(NULL);
+	}
+}
+
+void
+kernel_free(void *ptr)
+{
+}
+
+#endif /* OMIT_KMM_ALLOCONLY */
+#endif /* TOPPERS_kermem */

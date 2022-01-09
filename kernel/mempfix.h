@@ -106,14 +106,21 @@ typedef struct fixed_memorypool_waiting_information {
 } WINFO_MPF;
 
 /*
+ *  使用していない固定長メモリプール管理ブロックのリスト
+ */
+extern QUEUE	free_mpfcb;
+
+/*
  *  固定長メモリプールIDの最大値（kernel_cfg.c）
  */
 extern const ID	tmax_mpfid;
+extern const ID	tmax_smpfid;
 
 /*
  *  固定長メモリプール初期化ブロックのエリア（kernel_cfg.c）
  */
 extern const MPFINIB	mpfinib_table[];
+extern MPFINIB			ampfinib_table[];
 
 /*
  *  固定長メモリプール管理ブロックのエリア（kernel_cfg.c）

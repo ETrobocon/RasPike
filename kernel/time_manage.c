@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2014 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2017 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: time_manage.c 181 2014-06-14 16:45:07Z ertl-hiro $
+ *  $Id: time_manage.c 782 2017-03-10 23:33:54Z ertl-hiro $
  */
 
 /*
@@ -46,6 +46,10 @@
 
 #include "kernel_impl.h"
 #include "check.h"
+#include "task.h"
+#include "semaphore.h"
+#include "eventflag.h"
+#include "dataqueue.h"
 #include "time_event.h"
 #include "target_timer.h"
 
@@ -208,3 +212,165 @@ fch_hrt(void)
 }
 
 #endif /* TOPPERS_fch_hrt */
+
+/*
+ *  通知方法のエラーチェック
+ */
+#ifdef TOPPERS_chknfy
+
+ER
+check_nfyinfo(const T_NFYINFO *p_nfyinfo)
+{
+	ER		ercd;
+
+	if (p_nfyinfo->nfymode == TNFY_HANDLER) {
+		CHECK_PAR(FUNC_ALIGN(p_nfyinfo->nfy.handler.tmehdr));
+		CHECK_PAR(FUNC_NONNULL(p_nfyinfo->nfy.handler.tmehdr));
+	}
+	else {
+		switch (p_nfyinfo->nfymode & 0x0fU) {
+		case TNFY_SETVAR:
+			CHECK_PAR((p_nfyinfo->nfymode & ~0x0fU) == 0);
+			CHECK_PAR(INTPTR_ALIGN(p_nfyinfo->nfy.setvar.p_var));
+			CHECK_PAR(INTPTR_NONNULL(p_nfyinfo->nfy.setvar.p_var));
+			break;
+		case TNFY_INCVAR:
+			CHECK_PAR((p_nfyinfo->nfymode & ~0x0fU) == 0);
+			CHECK_PAR(INTPTR_ALIGN(p_nfyinfo->nfy.incvar.p_var));
+			CHECK_PAR(INTPTR_NONNULL(p_nfyinfo->nfy.incvar.p_var));
+			break;
+		case TNFY_ACTTSK:
+			CHECK_ID(VALID_TSKID(p_nfyinfo->nfy.acttsk.tskid));
+			break;
+		case TNFY_WUPTSK:
+			CHECK_ID(VALID_TSKID(p_nfyinfo->nfy.wuptsk.tskid));
+			break;
+		case TNFY_SIGSEM:
+			CHECK_ID(VALID_SEMID(p_nfyinfo->nfy.sigsem.semid));
+			break;
+		case TNFY_SETFLG:
+			CHECK_ID(VALID_FLGID(p_nfyinfo->nfy.setflg.flgid));
+			break;
+		case TNFY_SNDDTQ:
+			CHECK_ID(VALID_DTQID(p_nfyinfo->nfy.snddtq.dtqid));
+			break;
+		default:
+			CHECK_PAR(false);
+			break;
+		}
+		switch (p_nfyinfo->nfymode & ~0x0fU) {
+		case 0:
+			break;
+		case TENFY_SETVAR:
+			CHECK_PAR(INTPTR_ALIGN(p_nfyinfo->enfy.setvar.p_var));
+			CHECK_PAR(INTPTR_NONNULL(p_nfyinfo->enfy.setvar.p_var));
+			break;
+		case TENFY_INCVAR:
+			CHECK_PAR(INTPTR_ALIGN(p_nfyinfo->enfy.incvar.p_var));
+			CHECK_PAR(INTPTR_NONNULL(p_nfyinfo->enfy.incvar.p_var));
+			break;
+		case TENFY_ACTTSK:
+			CHECK_ID(VALID_TSKID(p_nfyinfo->enfy.acttsk.tskid));
+			break;
+		case TENFY_WUPTSK:
+			CHECK_ID(VALID_TSKID(p_nfyinfo->enfy.wuptsk.tskid));
+			break;
+		case TENFY_SIGSEM:
+			CHECK_ID(VALID_SEMID(p_nfyinfo->enfy.sigsem.semid));
+			break;
+		case TENFY_SETFLG:
+			CHECK_ID(VALID_FLGID(p_nfyinfo->enfy.setflg.flgid));
+			break;
+		case TENFY_SNDDTQ:
+			CHECK_ID(VALID_DTQID(p_nfyinfo->enfy.snddtq.dtqid));
+			break;
+		default:
+			CHECK_PAR(false);
+			break;
+		}
+	}
+	ercd = E_OK;
+
+  error_exit:
+	return(ercd);
+}
+
+#endif /* TOPPERS_chknfy */
+
+/*
+ *  通知ハンドラ
+ */
+#ifdef TOPPERS_nfyhdr
+
+void
+notify_handler(intptr_t exinf)
+{
+	T_NFYINFO	*p_nfyinfo = (T_NFYINFO *) exinf;
+	ER			ercd;
+
+	switch (p_nfyinfo->nfymode & 0x0fU) {
+	case TNFY_SETVAR:
+		*(p_nfyinfo->nfy.setvar.p_var) = p_nfyinfo->nfy.setvar.value;
+		ercd = E_OK;
+		break;
+	case TNFY_INCVAR:
+		(void) loc_cpu();
+		*(p_nfyinfo->nfy.incvar.p_var) += 1;
+		(void) unl_cpu();
+		ercd = E_OK;
+		break;
+	case TNFY_ACTTSK:
+		ercd = act_tsk(p_nfyinfo->nfy.acttsk.tskid);
+		break;
+	case TNFY_WUPTSK:
+		ercd = wup_tsk(p_nfyinfo->nfy.wuptsk.tskid);
+		break;
+	case TNFY_SIGSEM:
+		ercd = sig_sem(p_nfyinfo->nfy.sigsem.semid);
+		break;
+	case TNFY_SETFLG:
+		ercd = set_flg(p_nfyinfo->nfy.setflg.flgid,
+							p_nfyinfo->nfy.setflg.flgptn);
+		break;
+	case TNFY_SNDDTQ:
+		ercd = psnd_dtq(p_nfyinfo->nfy.snddtq.dtqid,
+							p_nfyinfo->nfy.snddtq.data);
+		break;
+	default:
+		ercd = E_SYS;
+		break;
+	}
+
+	if (ercd != E_OK) {
+		switch (p_nfyinfo->nfymode & ~0x0fU) {
+		case TENFY_SETVAR:
+			*(p_nfyinfo->enfy.setvar.p_var) = (intptr_t) ercd;
+			break;
+		case TENFY_INCVAR:
+			(void) loc_cpu();
+			*(p_nfyinfo->enfy.incvar.p_var) += 1;
+			(void) unl_cpu();
+			break;
+		case TENFY_ACTTSK:
+			(void) act_tsk(p_nfyinfo->enfy.acttsk.tskid);
+			break;
+		case TENFY_WUPTSK:
+			(void) wup_tsk(p_nfyinfo->enfy.wuptsk.tskid);
+			break;
+		case TENFY_SIGSEM:
+			(void) sig_sem(p_nfyinfo->enfy.sigsem.semid);
+			break;
+		case TENFY_SETFLG:
+			(void) set_flg(p_nfyinfo->enfy.setflg.flgid,
+							p_nfyinfo->enfy.setflg.flgptn);
+			break;
+		case TENFY_SNDDTQ:
+			(void) psnd_dtq(p_nfyinfo->enfy.snddtq.dtqid, (intptr_t) ercd);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+#endif /* TOPPERS_nfyhdr */

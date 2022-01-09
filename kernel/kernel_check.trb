@@ -301,6 +301,24 @@ $cfgData[:CRE_ALM].sort.each do |key, params|
   alminib += $sizeof_ALMINIB
 end
 
+#
+#  割込みサービスルーチンに関するチェック
+#
+isrinib = SYMBOL("_kernel_isrinib_table")
+$cfgData[:CRE_ISR].sort.each do |key, params|
+  isr = PEEK(isrinib + $offsetof_ISRINIB_isr, $sizeof_ISR)
+
+  # 割込みサービスルーチンの先頭番地のチェック［NGKI3004］
+  if (isr & ($CHECK_FUNC_ALIGN - 1)) != 0
+    error_wrong_id("E_PAR", params, :isr, :isrid, "not aligned")
+  end
+  if $CHECK_FUNC_NONNULL && isr == 0
+    error_wrong_id("E_PAR", params, :isr, :isrid, "null")
+  end
+
+  isrinib += $sizeof_ISRINIB
+end
+
 # 
 #  非タスクコンテキスト用のスタック領域に関するチェック
 # 
@@ -314,5 +332,18 @@ if !istkAddr.nil?
   end
   if $CHECK_STACK_NONNULL && istk == 0
     error_wrong("E_PAR", $cfgData[:DEF_ICS][1], :istk, "null")
+  end
+end
+
+# 
+#  カーネルが割り付けるメモリ領域に関するチェック
+# 
+kmmAddr = SYMBOL("_kernel_kmm")
+if !kmmAddr.nil?
+  kmm = PEEK(kmmAddr, $sizeof_void_ptr)
+
+  # カーネルが割り付けるメモリ領域の先頭番地のチェック
+  if (kmm & ($CHECK_MB_ALIGN - 1)) != 0
+    error_wrong("E_PAR", $cfgData[:DEF_KMM][1], :kmm, "not aligned")
   end
 end

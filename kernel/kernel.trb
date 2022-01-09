@@ -37,7 +37,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 # 
-#   $Id: kernel.trb 670 2016-03-03 15:08:11Z ertl-hiro $
+#   $Id: kernel.trb 716 2016-03-31 06:16:23Z ertl-hiro $
 # 
 
 #
@@ -107,11 +107,19 @@ class KernelObject
     @OBJ_S = obj_s.tr("a-z", "A-Z")
     @objid = (obj + "id").to_sym
     @api = "CRE_#{@OBJ}".to_sym
+    @inibList = { "#{@OBJ_S}INIB" => "a#{@obj_s}inib_table"}
   end
 
   def generate()
+    # AID_@OBJの処理
+    numAutoObjid = 0
+    $cfgData["AID_#{@OBJ}".to_sym].each do |key, params|
+      numAutoObjid += params["no#{@obj}".to_sym]
+    end
+    numObjid = $cfgData[@api].size + numAutoObjid
+
     # kernel_cfg.hの生成
-    $kernelCfgH.add("#define TNUM_#{@OBJ}ID\t#{$cfgData[@api].size}")
+    $kernelCfgH.add("#define TNUM_#{@OBJ}ID\t#{numObjid}")
 
     # オブジェクトのID番号のマクロ定義の生成
     $cfgData[@api].sort.each do |key, params|
@@ -128,9 +136,14 @@ class KernelObject
       $kernelCfgC.add()
     end
 
+    # 静的に生成されたオブジェクトの数
+    $kernelCfgC.add("#define TNUM_S#{@OBJ}ID\t#{$cfgData[@api].size}")
+
     # オブジェクトID番号の最大値
-    $kernelCfgC.add2("const ID _kernel_tmax_#{@obj}id" \
+    $kernelCfgC.add("const ID _kernel_tmax_#{@obj}id" \
 							" = (TMIN_#{@OBJ}ID + TNUM_#{@OBJ}ID - 1);")
+    $kernelCfgC.add2("const ID _kernel_tmax_s#{@obj}id" \
+							" = (TMIN_#{@OBJ}ID + TNUM_S#{@OBJ}ID - 1);")
 
     # データ構造
     if $cfgData[@api].size > 0
@@ -146,14 +159,28 @@ class KernelObject
 
       # オブジェクト初期化ブロックの生成
       $kernelCfgC.add("const #{@OBJ_S}INIB _kernel_#{@obj_s}inib_table" \
-													"[TNUM_#{@OBJ}ID] = {")
+													"[TNUM_S#{@OBJ}ID] = {")
       $cfgData[@api].sort.each_with_index do |(key, params), index|
         $kernelCfgC.add(",") if index > 0
         $kernelCfgC.append("\t{ " + generateInib(key, params) + " }")
       end
       $kernelCfgC.add
       $kernelCfgC.add2("};")
+    else
+      $kernelCfgC.add2("TOPPERS_EMPTY_LABEL(const #{@OBJ_S}INIB, " \
+										"_kernel_#{@obj_s}inib_table);")
+    end
 
+    # 動的生成オブジェクト用のオブジェクト初期化ブロック
+    @inibList.each do |type, array|
+      if numAutoObjid > 0
+        $kernelCfgC.add2("#{type} _kernel_#{array}[#{numAutoObjid}];")
+      else
+        $kernelCfgC.add2("TOPPERS_EMPTY_LABEL(#{type}, _kernel_#{array});")
+      end
+    end
+
+    if numObjid > 0
       # オブジェクト管理ブロックの生成
       $kernelCfgC.add2("#{@OBJ_S}CB _kernel_#{@obj_s}cb_table" \
 													"[TNUM_#{@OBJ}ID];")
@@ -161,9 +188,6 @@ class KernelObject
       # オブジェクト初期化関数の追加
       $initializeFunctions.push("_kernel_initialize_#{@object}();")
     else
-      # オブジェクトが1つもない場合
-      $kernelCfgC.add("TOPPERS_EMPTY_LABEL(const #{@OBJ_S}INIB, " \
-										"_kernel_#{@obj_s}inib_table);")
       $kernelCfgC.add2("TOPPERS_EMPTY_LABEL(#{@OBJ_S}CB, " \
 										"_kernel_#{@obj_s}cb_table);")
     end
@@ -383,6 +407,55 @@ STK_T *const _kernel_istk = #{istk};
 #ifdef TOPPERS_ISTKPT
 STK_T *const _kernel_istkpt = TOPPERS_ISTKPT(#{istk}, #{istksz});
 #endif /* TOPPERS_ISTKPT */
+EOS
+
+#
+#  カーネルが割り付けるメモリ領域
+#
+$kernelCfgC.comment_header("Memory Area Allocated by Kernel")
+
+if $cfgData[:DEF_KMM].size == 0
+  # DEF_KMMがない場合のデフォルト値の設定
+  kmmsz = "0"
+  kmm = "NULL"
+else
+  # 静的API「DEF_KMM」が複数ある（E_OBJ）
+  if ($cfgData[:DEF_KMM].size > 1)
+    error("E_OBJ: too many DEF_KMM")
+  end
+
+  # DEF_KMMがある場合の処理
+  params = $cfgData[:DEF_KMM][1]
+
+  # パラメータが省略された時のデフォルト値の設定
+  params[:kmm] ||= "NULL"
+
+  # kmmszが0の場合（E_PAR）
+  if params[:kmmsz] == 0
+    error_wrong("E_PAR", params, :kmmsz, "zero")
+  end
+
+  if params[:kmm] == "NULL"
+    # カーネルが割り付けるメモリ領域の自動割付け
+    $kernelCfgC.add("static MB_T _kernel_memory" \
+					"[TOPPERS_COUNT_SZ(#{params[:kmmsz]}, sizeof(MB_T))];")
+    kmmsz = "TOPPERS_ROUND_SZ(#{params[:kmmsz]}, sizeof(MB_T))"
+    kmm = "_kernel_memory"
+  else
+    # kmmszがカーネルが割り付けるメモリ領域のサイズとして正しくない場合
+    # （E_PAR）
+    if (params[:kmmsz] & ($CHECK_MB_ALIGN - 1)) != 0
+      error_wrong("E_PAR", params, :kmmsz, "not aligned")
+    end
+
+    kmmsz = "(#{params[:kmmsz]})"
+    kmm = "(void *)(#{params[:kmm]})"
+  end
+end
+
+$kernelCfgC.add(<<EOS)
+const size_t _kernel_kmmsz = #{kmmsz};
+MB_T *const _kernel_kmm = #{kmm};
 EOS
 
 #

@@ -89,6 +89,125 @@ volatile PRI		intpri_value;	/* 割込み優先度マスクを表す変数 */
 volatile sigset_t	sigmask_disint;	/* 個別にマスクしているシグナル */
 
 /*
+ *  シグナルマスクの設定
+ *
+ *  現在の状態（コンテキスト，CPUロックフラグ，割込み優先度マスク，割込
+ *  み禁止フラグ）を参照して，現在のシグナルマスクとsaved_sigmaskを適切
+ *  な値に設定する．
+ */
+
+void
+set_sigmask(void)
+{
+	sigset_t	sigmask;
+
+	sigassignset(&sigmask, &(sigmask_table[-intpri_value]));
+	sigjoinset(&sigmask, &sigmask_disint);
+	if (sense_context()) {
+		sigaddset(&sigmask, SIGUSR2);
+	}
+	if (lock_flag) {
+		sigassignset(&saved_sigmask, &sigmask);
+		sigjoinset(&sigmask, &sigmask_cpulock);
+	}
+	sigprocmask(SIG_SETMASK, &sigmask, NULL);
+}
+
+/*
+ *  CPUロック状態への移行
+ */
+void
+lock_cpu(void)
+{
+	assert(!lock_flag);
+	sigprocmask(SIG_BLOCK, &sigmask_cpulock, (sigset_t *) &saved_sigmask);
+	lock_flag = true;
+}
+
+/*
+ *  CPUロック状態の解除
+ */
+void
+unlock_cpu(void)
+{
+	assert(lock_flag);
+	lock_flag = false;
+	sigprocmask(SIG_SETMASK, (sigset_t *) &saved_sigmask, NULL);
+}
+
+/*
+ *  CPUロック状態の参照
+ */
+bool_t
+sense_lock(void)
+{
+	return(lock_flag);
+}
+
+
+/*
+ *  割込み優先度マスクの設定
+ */
+void
+t_set_ipm(PRI intpri)
+{
+	intpri_value = intpri;
+	set_sigmask();
+}
+
+/*
+ *  割込み優先度マスクの参照
+ */
+PRI
+t_get_ipm(void)
+{
+	return(intpri_value);
+}
+
+/*
+ *  割込み属性の設定のチェック
+ */
+bool_t
+check_intno_cfg(INTNO intno)
+{
+	return(!sigismember(&(sigmask_table[0]), intno)
+				&& sigismember(&(sigmask_table[7]), intno));
+}
+
+/*
+ *  割込み要求禁止フラグのセット
+ */
+void
+disable_int(INTNO intno)
+{
+	sigaddset((sigset_t *)&sigmask_disint, intno);
+	set_sigmask();
+}
+
+/*
+ *  割込み要求禁止フラグのクリア
+ */
+void
+enable_int(INTNO intno)
+{
+	sigdelset((sigset_t *)&sigmask_disint, intno);
+	set_sigmask();
+}
+
+/*
+ *  割込み要求のチェック
+ */
+bool_t
+probe_int(INTNO intno)
+{
+	sigset_t	sigmask;
+
+	sigpending(&sigmask);
+	return(sigismember(&sigmask, intno));
+}
+
+
+/*
  *  ディスパッチャ本体
  *
  *  LOG_DSP_LEAVEを，dispatcherに入れず，これを呼び出す関数の側に入れて
@@ -374,6 +493,7 @@ main()
  *
  *  TLSF（オープンソースのメモリ管理ライブラリ）を用いて実現．
  */
+#undef TOPPERS_SUPPORT_DYNAMIC_CRE
 #ifdef TOPPERS_SUPPORT_DYNAMIC_CRE
 
 #include "tlsf.h"

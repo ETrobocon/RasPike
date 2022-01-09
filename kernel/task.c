@@ -82,6 +82,11 @@ QUEUE	ready_queue[TNUM_TPRI];
 uint16_t	ready_primap;
 
 /*
+ *  使用していないTCBのリスト
+ */
+QUEUE	free_tcb;
+
+/*
  *  タスク管理モジュールの初期化
  */
 void
@@ -89,6 +94,7 @@ initialize_task(void)
 {
 	uint_t	i, j;
 	TCB		*p_tcb;
+	TINIB	*p_tinib;
 
 	p_runtsk = NULL;
 	p_schedtsk = NULL;
@@ -100,16 +106,23 @@ initialize_task(void)
 	}
 	ready_primap = 0U;
 
-	for (i = 0; i < tnum_tsk; i++) {
+	for (i = 0; i < tnum_stsk; i++) {
 		j = INDEX_TSK(torder_table[i]);
 		p_tcb = &(tcb_table[j]);
 		p_tcb->p_tinib = &(tinib_table[j]);
 		p_tcb->actque = false;
 		make_dormant(p_tcb);
-		p_tcb->p_lastmtx = NULL;
 		if ((p_tcb->p_tinib->tskatr & TA_ACT) != 0U) {
 			make_active(p_tcb);
 		}
+	}
+	queue_initialize(&free_tcb);
+	for (j = 0; i < tnum_tsk; i++, j++) {
+		p_tcb = &(tcb_table[i]);
+		p_tinib = &(atinib_table[j]);
+		p_tinib->tskatr = TA_NOEXS;
+		p_tcb->p_tinib = ((const TINIB *) p_tinib);
+		queue_insert_prev(&free_tcb, &(p_tcb->task_queue));
 	}
 }
 

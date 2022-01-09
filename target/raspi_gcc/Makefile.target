@@ -38,6 +38,13 @@ OBJDUMP = objdump
 OMIT_OFFSET_H = true
 
 #
+#  オフセットファイル生成のための定義
+#
+#TARGET_OFFSET_TRB = $(TARGETDIR)/target_offset.trb
+
+
+
+#
 #  コンパイルオプション
 #
 #  カーネルを関数単位でコンパイルする時には，未使用関数の警告を抑止する．
@@ -53,8 +60,9 @@ endif
 #  カーネルに関する定義
 #
 KERNEL_DIRS := $(KERNEL_DIRS) $(TARGETDIR)
-KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o
-
+KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o tlsf.o athrill-libgcc.o vdev.o
+#APPL_LIBS+= athrill-libgcc.o
+#WORKSPACE_LIB_TO_BUILD += athrill-libgcc.o
 #
 #  システムサービスに関する定義
 #

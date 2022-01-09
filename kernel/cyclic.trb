@@ -47,6 +47,7 @@
 class CyclicObject < KernelObject
   def initialize()
     super("cyc", "cyclic")
+    @inibList["T_NFYINFO"] = "acyc_nfyinfo_table"
   end
 
   def prepare(key, params)

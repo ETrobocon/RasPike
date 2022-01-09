@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: kernel_impl.h 706 2016-03-29 14:19:40Z ertl-hiro $
+ *  $Id: kernel_impl.h 748 2016-05-14 14:30:06Z ertl-hiro $
  */
 
 /*
@@ -117,6 +117,7 @@
 #define TMIN_MPFID		1		/* 固定長メモリプールIDの最小値 */
 #define TMIN_CYCID		1		/* 周期通知IDの最小値 */
 #define TMIN_ALMID		1		/* アラーム通知IDの最小値 */
+#define TMIN_ISRID		1		/* 割込みサービスルーチンIDの最小値 */
 
 /*
  *  優先度の段階数の定義
@@ -124,6 +125,29 @@
 #define TNUM_TPRI		(TMAX_TPRI - TMIN_TPRI + 1)
 #define TNUM_DPRI		(TMAX_DPRI - TMIN_DPRI + 1)
 #define TNUM_INTPRI		(TMAX_INTPRI - TMIN_INTPRI + 1)
+
+/*
+ *  カーネル内部で使用する属性の定義
+ */
+#define TA_NOEXS		((ATR)(-1))			/* 未登録状態 */
+
+#ifndef TA_MEMALLOC
+#define TA_MEMALLOC		UINT_C(0x8000)		/* メモリ領域をカーネルで確保 */
+#endif /* TA_MEMALLOC */
+#ifndef TA_MBALLOC
+#define TA_MBALLOC		UINT_C(0x4000)		/* 管理領域をカーネルで確保 */
+#endif /* TA_MBALLOC */
+
+/*
+ *  ターゲット定義のエラーチェックマクロのデフォルト値の定義
+ */
+#ifndef TARGET_TSKATR
+#define TARGET_TSKATR		0U		/* ターゲット定義のタスク属性 */
+#endif /* TARGET_TSKATR */
+
+#ifndef TARGET_ISRATR
+#define TARGET_ISRATR		0U		/* ターゲット定義のISR属性 */
+#endif /* TARGET_ISRATR */
 
 /*
  *  ヘッダファイルを持たないモジュールの関数・変数の宣言
@@ -160,6 +184,12 @@ extern STK_T *const	istkpt;		/* スタックポインタの初期値 */
 #endif /* TOPPERS_ISTKPT */
 
 /*
+ *  カーネルが割り付けるメモリ領域（kernel_cfg.c）
+ */
+extern const size_t	kmmsz;		/* カーネルが割り付けるメモリ領域のサイズ */
+extern MB_T *const	kmm;		/* カーネルが割り付けるメモリ領域の先頭番地 */
+
+/*
  *  カーネル動作状態フラグ（startup.c）
  */
 extern bool_t	kerflg;
@@ -175,9 +205,26 @@ extern void	sta_ker(void);
 extern void	exit_kernel(void);
 
 /*
+ *  カーネルの割り付けるメモリ領域の管理（startup.c）
+ */
+extern void initialize_kmm(void);
+extern void *kernel_malloc(size_t size);
+extern void kernel_free(void *ptr);
+
+/*
  *  通知ハンドラの型定義
  */
 typedef void	(*NFYHDR)(intptr_t exinf);
+
+/*
+ *  通知方法のエラーチェック
+ */
+extern ER check_nfyinfo(const T_NFYINFO *p_nfyinfo);
+
+/*
+ *  通知ハンドラ
+ */
+extern void notify_handler(intptr_t exinf);
 
 #endif /* TOPPERS_MACRO_ONLY */
 #endif /* TOPPERS_KERNEL_IMPL_H */

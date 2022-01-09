@@ -37,7 +37,7 @@
 #  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #  の責任を負わない．
 # 
-#  $Id: Makefile.kernel 788 2017-04-01 07:25:17Z ertl-hiro $
+#  $Id: Makefile.kernel 801 2017-07-20 16:07:56Z ertl-hiro $
 # 
 
 #
@@ -57,7 +57,7 @@ KERNEL_FCSRCS = startup.c task.c taskhook.c wait.c time_event.c \
 #
 #  各ソースファイルから生成されるオブジェクトファイルのリスト
 #
-startup = sta_ker.o ext_ker.o
+startup = sta_ker.o ext_ker.o kermem.o
 
 task = tskini.o tsksched.o tskrun.o tsknrun.o \
 		tskdmt.o tskact.o tskpri.o tskrot.o tskterm.o
@@ -70,7 +70,8 @@ wait = waimake.o waicmp.o waitmo.o waitmook.o \
 time_event = tmeini.o tmeup.o tmedown.o tmecur.o tmeset.o \
 		tmereg.o tmeenq.o tmedeq.o tmechk.o tmeltim.o sigtim.o
 
-task_manage = act_tsk.o can_act.o get_tst.o chg_pri.o get_pri.o get_inf.o
+task_manage = acre_tsk.o del_tsk.o act_tsk.o can_act.o get_tst.o \
+		chg_pri.o get_pri.o get_inf.o
 
 task_refer = ref_tsk.o
 
@@ -79,38 +80,39 @@ task_sync = slp_tsk.o tslp_tsk.o wup_tsk.o can_wup.o \
 
 task_term = ext_tsk.o ras_ter.o ena_ter.o dis_ter.o sns_ter.o ter_tsk.o
 
-semaphore = semini.o sig_sem.o \
+semaphore = semini.o acre_sem.o del_sem.o sig_sem.o \
 		wai_sem.o pol_sem.o twai_sem.o ini_sem.o ref_sem.o
 
-eventflag = flgini.o flgcnd.o set_flg.o clr_flg.o \
+eventflag = flgini.o flgcnd.o acre_flg.o del_flg.o set_flg.o clr_flg.o \
 		wai_flg.o pol_flg.o twai_flg.o ini_flg.o ref_flg.o
 
 dataqueue = dtqini.o dtqenq.o dtqfenq.o dtqdeq.o dtqsnd.o dtqfsnd.o dtqrcv.o \
-		snd_dtq.o psnd_dtq.o tsnd_dtq.o fsnd_dtq.o \
+		acre_dtq.o del_dtq.o snd_dtq.o psnd_dtq.o tsnd_dtq.o fsnd_dtq.o \
 		rcv_dtq.o prcv_dtq.o trcv_dtq.o ini_dtq.o ref_dtq.o
 
 pridataq = pdqini.o pdqenq.o pdqdeq.o pdqsnd.o pdqrcv.o \
-		snd_pdq.o psnd_pdq.o tsnd_pdq.o \
+		acre_pdq.o del_pdq.o snd_pdq.o psnd_pdq.o tsnd_pdq.o \
 		rcv_pdq.o prcv_pdq.o trcv_pdq.o ini_pdq.o ref_pdq.o
 
 mutex = mtxini.o mtxchk.o mtxscan.o mtxdrop.o mtxacq.o mtxrel.o mtxrela.o \
-		loc_mtx.o ploc_mtx.o tloc_mtx.o unl_mtx.o ini_mtx.o ref_mtx.o
+		acre_mtx.o del_mtx.o loc_mtx.o ploc_mtx.o tloc_mtx.o \
+		unl_mtx.o ini_mtx.o ref_mtx.o
 
-mempfix = mpfini.o mpfget.o get_mpf.o pget_mpf.o tget_mpf.o \
-		rel_mpf.o ini_mpf.o ref_mpf.o
+mempfix = mpfini.o mpfget.o acre_mpf.o del_mpf.o get_mpf.o \
+		pget_mpf.o tget_mpf.o rel_mpf.o ini_mpf.o ref_mpf.o
 
-time_manage = set_tim.o get_tim.o adj_tim.o fch_hrt.o
+time_manage = set_tim.o get_tim.o adj_tim.o fch_hrt.o chknfy.o nfyhdr.o
 
-cyclic = cycini.o sta_cyc.o stp_cyc.o ref_cyc.o cyccal.o
+cyclic = cycini.o acre_cyc.o del_cyc.o sta_cyc.o stp_cyc.o ref_cyc.o cyccal.o
 
-alarm = almini.o sta_alm.o stp_alm.o ref_alm.o almcal.o
+alarm = almini.o acre_alm.o del_alm.o sta_alm.o stp_alm.o ref_alm.o almcal.o
 
 sys_manage = rot_rdq.o get_tid.o get_lod.o get_nth.o \
 		loc_cpu.o unl_cpu.o dis_dsp.o ena_dsp.o \
 		sns_ctx.o sns_loc.o sns_dsp.o sns_dpn.o sns_ker.o
 
-interrupt = intini.o dis_int.o ena_int.o clr_int.o ras_int.o prb_int.o \
-		chg_ipm.o get_ipm.o
+interrupt = isrini.o isrcal.o acre_isr.o del_isr.o intini.o \
+		dis_int.o ena_int.o clr_int.o ras_int.o prb_int.o chg_ipm.o get_ipm.o
 
 exception = excini.o xsns_dpn.o
 
