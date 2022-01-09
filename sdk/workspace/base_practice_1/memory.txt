@@ -1,0 +1,7 @@
+ROM, 0x00000000, 2048
+RAM, 0x00200000, 2048
+RAM, 0x03FF7000, 1024
+RAM, 0x05FF7000, 10240
+RAM, 0x07FF7000, 10240
+#DEV,  0x090F0000, /root/athrill-device/device/ev3com/ev3com.so
+DEV,  0x090F0000, /root/athrill-device/device/ev3com/build/libev3com.so

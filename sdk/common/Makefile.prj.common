@@ -1,0 +1,44 @@
+#
+# This Makefile includes the common part to build an EV3RT project.
+#
+# Input:
+# $(APPLDIRS)
+#
+# Output:
+# $(EV3RT_SDK_COM_DIR)
+# $(EV3RT_SDK_API_DIR)
+# $(EV3RT_SDK_LIB_DIR)
+# $(APPL_DIRS) (update)
+# $(INCLUDES) (update)
+#
+
+this_abs_dir := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+get_relpath = $(shell perl -MFile::Spec -e "print File::Spec->abs2rel(q($1),q($2))")
+
+#
+# $(EV3RT_SDK_COM_DIR)
+# app_common.cfg
+#
+EV3RT_SDK_COM_DIR := $(call get_relpath, $(this_abs_dir), $(PWD))
+INCLUDES += -I$(EV3RT_SDK_COM_DIR)
+
+#
+# EV3RT C Language API
+#
+ev3rt_sdk_api_abs_dir := $(this_abs_dir)/ev3api
+EV3RT_SDK_API_DIR := $(call get_relpath, $(ev3rt_sdk_api_abs_dir), $(PWD))
+APPL_DIRS += $(EV3RT_SDK_API_DIR)/src
+INCLUDES += -I$(EV3RT_SDK_API_DIR) -I$(EV3RT_SDK_API_DIR)/include
+include $(EV3RT_SDK_API_DIR)/Makefile
+
+#
+# Static libraries
+#
+ev3rt_sdk_lib_abs_dir := $(this_abs_dir)/library
+EV3RT_SDK_LIB_DIR := $(call get_relpath, $(ev3rt_sdk_lib_abs_dir), $(PWD))
+
+#
+# Add include/ and src/ under application directory to search path
+#
+INCLUDES += $(foreach dir,$(shell find $(APPLDIRS) -type d -name include),-I$(dir))
+APPL_DIRS += $(foreach dir,$(shell find $(APPLDIRS) -type d -name src),$(dir))
