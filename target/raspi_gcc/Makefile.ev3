@@ -19,5 +19,7 @@ APPL_COBJS += uart_dri.o
 APPL_COBJS += motor_dri.o
 APPL_COBJS += gpio_dri.o
 APPL_COBJS += athrill_serial_driver.o
+APPL_COBJS += athrill-libgcc.o
+APPL_COBJS += vdev.o
 
 include $(TARGETDIR)/Makefile.target
