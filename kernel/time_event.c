@@ -560,6 +560,8 @@ signal_time(void)
 	bool_t	callflag;
 
 	assert(sense_context());
+	//	assert(!sense_context());
+
 	assert(!sense_lock());
 
 	lock_cpu();

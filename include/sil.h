@@ -118,6 +118,7 @@ Inline void
 sil_wrb_mem(uint8_t *mem, uint8_t data)
 {
 	*((volatile uint8_t *) mem) = data;
+	SilCallWriteHook(1,(uint32)mem,data);
 }
 
 #endif /* UINT8_MAX */

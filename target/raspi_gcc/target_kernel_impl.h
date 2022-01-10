@@ -57,7 +57,8 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
-
+#include <stdlib.h>
+#include <string.h>
 #include <kernel.h>
 #include <t_syslog.h>
 #endif /* TOPPERS_MACRO_ONLY */
@@ -111,6 +112,15 @@
 #ifndef LOG_EXC_LEAVE
 #define LOG_EXC_LEAVE(excno)
 #endif /* LOG_EXC_LEAVE */
+
+
+/* 
+ * signal中かどうかを示すフラグ
+ * recev()で待っているところにsignalが入ると、なぜかsigaltstackでss_flagsでON_STACKが設定されない。
+ * そのため、割り込みハンドラが呼ばれた際に明示的にsignal中であることを示すようにする。
+ * 基本的にはSIGALRMの時にしか使われないはず
+ */
+extern int is_in_signal;
 
 /*
  *  アーキテクチャ（プロセッサ）依存の定義
@@ -226,14 +236,8 @@ extern sigset_t	sigmask_cpulock;	/* CPUロックでマスクするシグナル *
 /*
  *  コンテキストの参照
  */
-Inline bool_t
-sense_context(void)
-{
-	stack_t	ss;
-
-	sigaltstack(NULL, &ss);
-	return((ss.ss_flags & SS_ONSTACK) != 0);
-}
+extern bool_t
+sense_context(void);
 
 /*
  *  CPUロックフラグ実現のための変数
@@ -323,6 +327,18 @@ extern void disable_int(INTNO intno);
  *  割込み要求禁止フラグのクリア
  */
 extern void enable_int(INTNO intno);
+
+/*
+ * 全割り込み要求禁止
+ */
+extern void disable_int_all(void);
+
+/*
+ * 全割り込み要求解除
+ */
+extern void enable_int_all(void);
+
+
 
 #define x_clear_int(arg) 
 
@@ -440,9 +456,10 @@ define_inh(INHNO inhno, FP int_entry, PRI intpri)
 	struct sigaction	sigact;
 
 	assert(VALID_INHNO(inhno));
+	memset(&sigact,0,sizeof(sigact));
 	sigact.sa_sigaction =
 				(void (*)(int, siginfo_t *, void *))(int_entry);
-	sigact.sa_flags = (SA_ONSTACK | SA_SIGINFO);
+	sigact.sa_flags = (SA_ONSTACK | SA_SIGINFO | SA_RESTART);
 	sigassignset(&(sigact.sa_mask), &(sigmask_table[-intpri]));
 	sigaddset(&(sigact.sa_mask), SIGUSR2);
 	sigaction(inhno, &sigact, NULL);
@@ -465,7 +482,7 @@ define_exc(EXCNO excno, FP exc_entry)
 	assert(VALID_EXCNO(excno));
 	sigact.sa_sigaction =
 				(void (*)(int, siginfo_t *, void *))(exc_entry);
-	sigact.sa_flags = (SA_ONSTACK | SA_SIGINFO | SA_NODEFER);
+	sigact.sa_flags = (SA_ONSTACK | SA_SIGINFO | SA_NODEFER | SA_RESTART);
 	sigemptyset(&(sigact.sa_mask));
 	sigaddset(&(sigact.sa_mask), SIGUSR2);
 	sigaction(excno, &sigact, NULL);
@@ -638,3 +655,6 @@ extern void	target_exit(void) NoReturn;
 // #define OMIT_KMM_ALLOCONLY
 
 #endif /* TOPPERS_TARGET_KERNEL_IMPL_H */
+
+
+extern int target_main(void);

@@ -113,15 +113,42 @@ set_sigmask(void)
 	sigprocmask(SIG_SETMASK, &sigmask, NULL);
 }
 
+
+
+/*
+ *  コンテキストの参照
+ */
+
+int is_in_signal = 0;
+
+bool_t
+sense_context(void)
+{
+  stack_t	ss;
+  sigaltstack(NULL, &ss);
+  return(((ss.ss_flags & SS_ONSTACK) != 0) || is_in_signal );
+}
+
+
 /*
  *  CPUロック状態への移行
  */
+extern void foo(void);
+int lock_cpu_context =0;
 void
 lock_cpu(void)
 {
-	assert(!lock_flag);
 	sigprocmask(SIG_BLOCK, &sigmask_cpulock, (sigset_t *) &saved_sigmask);
-	lock_flag = true;
+	if ( lock_flag ) foo();
+	assert(!lock_flag);
+	/* For Test */
+	if ((lock_cpu_context = sense_context())) {
+	  foo();
+	}
+
+	lock_flag = true;	
+
+
 }
 
 /*
@@ -193,6 +220,26 @@ enable_int(INTNO intno)
 	sigdelset((sigset_t *)&sigmask_disint, intno);
 	set_sigmask();
 }
+
+/*
+ * 全割り込み要求禁止
+ */
+void disable_int_all(void)
+{
+  sigset_t			sigmask;  
+  sigfillset(&sigmask);
+  sigprocmask(SIG_SETMASK, &sigmask, &saved_sigmask);  
+}
+
+/*
+ * 全割り込み要求解除
+ */
+void enable_int_all(void)
+{
+  sigprocmask(SIG_SETMASK, &saved_sigmask, NULL);
+}
+
+
 
 /*
  *  割込み要求のチェック
@@ -325,7 +372,7 @@ call_exit_kernel(void)
 	 *  SIGUSR2のシグナルハンドラにexit_kernelを登録
 	 */
 	sigact.sa_handler = (void (*)(int)) exit_kernel;
-	sigact.sa_flags = SA_ONSTACK;
+	sigact.sa_flags = (SA_ONSTACK | SA_RESTART);
 	sigemptyset(&(sigact.sa_mask));
 	sigaction(SIGUSR2, &sigact, NULL);
 
@@ -378,7 +425,9 @@ target_initialize(void)
 	 */
 	sigassignset(&sigmask_cpulock, &(sigmask_table[-TMIN_INTPRI]));
 	sigaddset(&sigmask_cpulock, SIGUSR2);
-
+	/* cpu lock 時にALRMが来ることを防ぐ */
+	sigaddset(&sigmask_cpulock, SIGALRM);	
+	
 	/*
 	 *  CPUロックフラグ実現のための変数の初期化
 	 *
@@ -401,7 +450,7 @@ target_initialize(void)
 	 *  SIGUSR2のシグナルハンドラにディスパッチャを登録
 	 */
 	sigact.sa_sigaction = dispatch_handler;
-	sigact.sa_flags = SA_SIGINFO;
+	sigact.sa_flags = (SA_SIGINFO | SA_ONSTACK | SA_RESTART);
 	sigassignset(&(sigact.sa_mask), &sigmask_cpulock);
 	sigaction(SIGUSR2, &sigact, NULL);
 }
@@ -437,7 +486,7 @@ initialize_interrupt(void)
  *  メイン関数
  */
 int
-main()
+target_main(void)
 {
 	sigset_t			sigmask;
 	stack_t				ss;
@@ -462,7 +511,7 @@ main()
 	 *  SIGUSR2のシグナルハンドラにsta_kerを登録
 	 */
 	sigact.sa_handler = (void (*)(int)) sta_ker;
-	sigact.sa_flags = SA_ONSTACK;
+	sigact.sa_flags = (SA_ONSTACK | SA_RESTART);
 	sigemptyset(&(sigact.sa_mask));
 	sigaction(SIGUSR2, &sigact, NULL);
 

@@ -49,9 +49,9 @@ OMIT_OFFSET_H = true
 #
 #  カーネルを関数単位でコンパイルする時には，未使用関数の警告を抑止する．
 #
-INCLUDES := $(INCLUDES) -I$(TARGETDIR) -I$(TOOLDIR)
+INCLUDES := $(INCLUDES) -I$(TARGETDIR) -I$(TOOLDIR) -I$(TARGETDIR)/athrill -I$(TARGETDIR)/athrill/option
 #COPTS :=  -Werror $(COPTS)
-COPTS := -D_GNU_SOURCE $(COPTS)
+COPTS := -D_GNU_SOURCE -pthread $(COPTS) 
 ifdef KERNEL_FUNCOBJS
 	COPTS := -Wno-unused-function $(COPTS)
 endif
@@ -60,7 +60,7 @@ endif
 #  カーネルに関する定義
 #
 KERNEL_DIRS := $(KERNEL_DIRS) $(TARGETDIR)
-KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o tlsf.o
+KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o target_timer.o tlsf.o file.o token.o option.o devconfig.o main.o target_sil.o
 #APPL_LIBS+= athrill-libgcc.o
 #WORKSPACE_LIB_TO_BUILD += athrill-libgcc.o
 #

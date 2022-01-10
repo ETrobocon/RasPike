@@ -58,7 +58,7 @@ void gpio_set_value(uint32_t pin, bool_t value) {
 }
 void gpio_out_flush(void)
 {
-  //	disable_int_all();
+  	disable_int_all();
 	lock_cpu();
 	sil_wrb_mem((void*)VDEV_TX_FLAG_BASE, 1);
 
@@ -81,5 +81,5 @@ void gpio_out_flush(void)
 	}
 #endif
 	unlock_cpu();
-	//	enable_int_all();
+	enable_int_all();
 }

@@ -60,6 +60,8 @@
 
 #include <t_stddef.h>
 
+
+#include "std_types.h"
 /*
  *  NMIを除くすべての割込みの禁止
  */
@@ -110,5 +112,9 @@ sil_dly_nse(ulong_t dlytim)
 #elif defined(__arm__) 
 #define SIL_ENDIAN_LITTLE			/* リトルエンディアン */
 #endif
+
+typedef Std_ReturnType (*SilWriteHook)(int size, uint32 addr, uint8_t data);
+extern void SilSetWriteHook(const SilWriteHook hook);
+extern Std_ReturnType SilCallWriteHook(int size, uint32 addr, uint8_t data);
 
 #endif /* TOPPERS_TARGET_SIL_H */
