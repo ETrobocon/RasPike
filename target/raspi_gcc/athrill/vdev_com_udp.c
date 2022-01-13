@@ -23,6 +23,8 @@ Std_ReturnType vdevUdpInit(void)
   Std_ReturnType err;
   uint32 portno;
 
+  vdev_control.config.is_wait = TRUE;
+  
   vdev_control.remote_ipaddr = "127.0.0.1";
   (void)cpuemu_get_devcfg_string("DEBUG_FUNC_VDEV_TX_IPADDR", &vdev_control.remote_ipaddr);
   printf("VDEV:TX IPADDR=%s\n", vdev_control.remote_ipaddr);

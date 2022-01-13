@@ -293,8 +293,6 @@ void
 target_timer_handler(void)
 {
 	lock_cpu();
-	// for sense_context();
-	is_in_signal = 1;
 	pause_itimer();
 
 #ifdef TOPPERS_SUPPORT_OVRHDR
@@ -323,14 +321,9 @@ target_timer_handler(void)
 		unlock_cpu();
 
 		signal_time();			/* 高分解能タイマ割込みの処理 */
-	// for sense_context();
-		is_in_signal = 0;
-
 		start_itimer();
 	}
 	else {
-	// for sense_context();
-		is_in_signal = 0;
 		unlock_cpu();
 		start_itimer();
 	}

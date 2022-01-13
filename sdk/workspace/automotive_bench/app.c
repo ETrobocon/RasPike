@@ -12,9 +12,9 @@
 // end::tracer_def[]
 // tag::main_task[]
 void main_task(intptr_t unused) {
-	athrill_reset_time();
+	//athrill_reset_time();
 	basic_math_main();
-	athrill_show_time();
+	//athrill_show_time();
 	printf("Finished\n");
 
 }

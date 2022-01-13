@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "udp_comm.h"
-
+#include "errno.h"
 
 #define UDP_COMM_BLOCKING		0
 #define UDP_COMM_NONBLOCKING	1
@@ -59,12 +59,18 @@ Std_ReturnType udp_comm_read(UdpCommType *comm)
 {
 	int err;
 
-	err = recv(comm->srv_sock, comm->read_data.buffer, sizeof(comm->read_data.buffer), 0);
-	if (err <= 0) {
-		return STD_E_INVALID;
+	while(1) {
+	  err = recv(comm->srv_sock, comm->read_data.buffer, sizeof(comm->read_data.buffer), 0);
+	  if ( err >= 0 ) {
+	    comm->read_data.len = err;
+	    return STD_E_OK;
+	  } else if (errno != EAGAIN && errno != EINTR ) {
+	    return STD_E_INVALID;
+	  } else {
+	    // retry
+	  }
 	}
-	comm->read_data.len = err;
-
+	// not reached
 	return STD_E_OK;
 }
 
@@ -107,10 +113,18 @@ Std_ReturnType udp_comm_write(UdpCommType *comm)
 	addr.sin_port = comm->client_port;
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-	err = sendto(comm->clt_sock, comm->write_data.buffer, comm->write_data.len, 0,
-			(struct sockaddr *)&addr, sizeof(addr));
-	if (err != comm->write_data.len) {
-		return STD_E_INVALID;
+	while (1) {
+	  err = sendto(comm->clt_sock, comm->write_data.buffer, comm->write_data.len, 0,
+		       (struct sockaddr *)&addr, sizeof(addr));
+	  if ( err > 0 ) {
+	    if ( err  != comm->write_data.len) {
+	      return STD_E_INVALID;
+	    }
+	    break; // valid
+	  } else  if ( err < 0 && ( errno != EAGAIN && errno != EINTR )) {
+	    return STD_E_INVALID;
+	  }
+	  // err == 0 or EAGIN, EINTR call again
 	}
 	close(comm->clt_sock);
 	comm->clt_sock = -1;
@@ -133,11 +147,20 @@ Std_ReturnType udp_comm_remote_write(UdpCommType *comm, const char *remote_ipadd
 	addr.sin_port = comm->client_port;
 	addr.sin_addr.s_addr = inet_addr(remote_ipaddr);
 
-	err = sendto(comm->clt_sock, comm->write_data.buffer, comm->write_data.len, 0,
-			(struct sockaddr *)&addr, sizeof(addr));
-	if (err != comm->write_data.len) {
-		return STD_E_INVALID;
+	while (1) {
+	  err = sendto(comm->clt_sock, comm->write_data.buffer, comm->write_data.len, 0,
+		       (struct sockaddr *)&addr, sizeof(addr));
+	  if ( err > 0 ) {
+	    if ( err  != comm->write_data.len) {
+	      return STD_E_INVALID;
+	    }
+	    break; // valid
+	  } else  if ( err < 0 && ( errno != EAGAIN && errno != EINTR )) {
+	    return STD_E_INVALID;
+	  }
+	  // err == 0 or EAGIN, EINTR call again
 	}
+
 	close(comm->clt_sock);
 	comm->clt_sock = -1;
 

@@ -114,14 +114,6 @@
 #endif /* LOG_EXC_LEAVE */
 
 
-/* 
- * signal中かどうかを示すフラグ
- * recev()で待っているところにsignalが入ると、なぜかsigaltstackでss_flagsでON_STACKが設定されない。
- * そのため、割り込みハンドラが呼ばれた際に明示的にsignal中であることを示すようにする。
- * 基本的にはSIGALRMの時にしか使われないはず
- */
-extern int is_in_signal;
-
 /*
  *  アーキテクチャ（プロセッサ）依存の定義
  */

@@ -119,14 +119,13 @@ set_sigmask(void)
  *  コンテキストの参照
  */
 
-int is_in_signal = 0;
 
 bool_t
 sense_context(void)
 {
   stack_t	ss;
   sigaltstack(NULL, &ss);
-  return(((ss.ss_flags & SS_ONSTACK) != 0) || is_in_signal );
+  return((ss.ss_flags & SS_ONSTACK) != 0);
 }
 
 
@@ -450,7 +449,7 @@ target_initialize(void)
 	 *  SIGUSR2のシグナルハンドラにディスパッチャを登録
 	 */
 	sigact.sa_sigaction = dispatch_handler;
-	sigact.sa_flags = (SA_SIGINFO | SA_ONSTACK | SA_RESTART);
+	sigact.sa_flags = (SA_SIGINFO | SA_RESTART);
 	sigassignset(&(sigact.sa_mask), &sigmask_cpulock);
 	sigaction(SIGUSR2, &sigact, NULL);
 }
