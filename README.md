@@ -1,9 +1,13 @@
 Raspi用EV3 シミュレータ
 
 初めに
+
+
 このraspi用aspシミュレータはMac OS X用のシミュレータをraspi用に修正したものです。
 https://www.toppers.jp/asp3-e-download.html
-athrillのバージョンに合わせるため、3.2.0を使用しています。
+
+athrillのバージョンに合わせるため、3.2.0を使用しています。ETロボコンのため、SPIKEとシリアルで繋げて、直接動作させるために使用する予定です。
+
 また、linux用の変更やsetjmp/longjmpのmangleに関しては
 https://qiita.com/morioka/items/a186fff4db1eabb7e7de
 を参考にしています。
@@ -51,7 +55,13 @@ cd ev3rtsim/sdk/workspace
 make img=(
 ```
 
-実行の仕方
+4. 実行の仕方
+
+ETロボコンシミュレータと繋ぐには、raspi側の設定と、ETロボコン側の設定が必要です。
+raspi側はsdk/common/device_config.txtに相手側のIPアドレスを書く必要があります(TX)。
+また、ETロボコンシミュレータ側は「設定」からraspi側のIPアドレスを指定します（設定後は「リセット」ボタンを押して、ロボットが初期状態になるようにしてください）
+
+
 ```
 env LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so ./asp
 ```
