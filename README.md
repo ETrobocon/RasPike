@@ -59,11 +59,20 @@ make img=(
 
 ETロボコンシミュレータと繋ぐには、raspi側の設定と、ETロボコン側の設定が必要です。
 raspi側はsdk/common/device_config.txtに相手側のIPアドレスを書く必要があります(TX)。
+
+sdk/common/device_config.txtの以下を環境に合わせて変更してください
+
+```
+DEBUG_FUNC_VDEV_TX_IPADDR	192.168.11.4   --> PC側のIPアドレス
+DEBUG_FUNC_VDEV_RX_IPADDR	192.168.11.12  --> RaspiのIPアドレス
+```
+
+
 また、ETロボコンシミュレータ側は「設定」からraspi側のIPアドレスを指定します（設定後は「リセット」ボタンを押して、ロボットが初期状態になるようにしてください）
 
 
 ```
-env LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so ./asp
+env LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
 ```
 で実行できます。
 
@@ -72,7 +81,7 @@ gdbを使う場合は
 gdb asp
 gdb) set environment LD_PRELOAD=../../../raspi_simple_setjmp/libssetjmp.so
 gdb) handle SIGUSR2 noprint nostop pass
-gdb) r
+gdb) r -d ../common/device_config.txt
 ```
 で実行できます。シミュレータではSIGUSR2をプライオリティ変更のとりがとして利用しているので、SIGUSR2をgdbがトラップせずにaspアプリ側に渡す必要があります。
 libssetjmp.soの置いている場所に合わせて変更してください。

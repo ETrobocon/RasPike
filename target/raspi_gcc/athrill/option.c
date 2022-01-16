@@ -1,4 +1,4 @@
-#include "option/option.h"
+#include "option.h"
 #include "file.h"
 #include <stdlib.h>
 #include <errno.h>
