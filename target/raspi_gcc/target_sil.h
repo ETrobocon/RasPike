@@ -113,8 +113,8 @@ sil_dly_nse(ulong_t dlytim)
 #define SIL_ENDIAN_LITTLE			/* リトルエンディアン */
 #endif
 
-typedef Std_ReturnType (*SilWriteHook)(int size, uint32 addr, uint8_t data);
+typedef Std_ReturnType (*SilWriteHook)(int size, uint32 addr, const void* data);
 extern void SilSetWriteHook(const SilWriteHook hook);
-extern Std_ReturnType SilCallWriteHook(int size, uint32 addr, uint8_t data);
+extern Std_ReturnType SilCallWriteHook(int size, uint32 addr, const void* data);
 
 #endif /* TOPPERS_TARGET_SIL_H */

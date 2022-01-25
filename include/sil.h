@@ -118,7 +118,7 @@ Inline void
 sil_wrb_mem(uint8_t *mem, uint8_t data)
 {
 	*((volatile uint8_t *) mem) = data;
-	SilCallWriteHook(1,(uint32)mem,data);
+	SilCallWriteHook(1,(uint32)mem,(void*)&data);
 }
 
 #endif /* UINT8_MAX */
@@ -140,6 +140,7 @@ Inline void
 sil_wrh_mem(uint16_t *mem, uint16_t data)
 {
 	*((volatile uint16_t *) mem) = data;
+	SilCallWriteHook(2,(uint32)mem,(void*)&data);
 }
 
 #ifdef SIL_ENDIAN_BIG			/* ビッグエンディアンプロセッサ */
@@ -164,7 +165,9 @@ sil_reh_lem(const uint16_t *mem)
 Inline void
 sil_wrh_lem(uint16_t *mem, uint16_t data)
 {
-	*((volatile uint16_t *) mem) = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
+  data = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
+  *((volatile uint16_t *) mem) = data;
+  SilCallWriteHook(2,(uint32)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRH_LEM */
@@ -191,7 +194,9 @@ sil_reh_bem(const uint16_t *mem)
 Inline void
 sil_wrh_bem(uint16_t *mem, uint16_t data)
 {
-	*((volatile uint16_t *) mem) = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
+  data = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
+  *((volatile uint16_t *) mem) = data;
+  SilCallWriteHook(2,(uint32)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRH_BEM */
@@ -219,6 +224,7 @@ Inline void
 sil_wrw_mem(uint32_t *mem, uint32_t data)
 {
 	*((volatile uint32_t *) mem) = data;
+	SilCallWriteHook(4,(uint32)mem,&data);
 }
 
 #ifdef SIL_ENDIAN_BIG			/* ビッグエンディアンプロセッサ */
@@ -243,7 +249,9 @@ sil_rew_lem(const uint32_t *mem)
 Inline void
 sil_wrw_lem(uint32_t *mem, uint32_t data)
 {
-	*((volatile uint32_t *) mem) = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
+  data = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
+  *((volatile uint32_t *) mem) = data;
+  SilCallWriteHook(4,(uint32)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRW_LEM */
@@ -257,10 +265,10 @@ sil_wrw_lem(uint32_t *mem, uint32_t data)
 Inline uint32_t
 sil_rew_bem(const uint32_t *mem)
 {
-	uint32_t	data;
+  uint32_t	data;
 
-	data = *((const volatile uint32_t *) mem);
-	return(TOPPERS_SIL_REV_ENDIAN_UINT32(data));
+  data = *((const volatile uint32_t *) mem);
+  return(TOPPERS_SIL_REV_ENDIAN_UINT32(data));
 }
 
 #endif /* TOPPERS_OMIT_SIL_REW_BEM */
@@ -269,7 +277,9 @@ sil_rew_bem(const uint32_t *mem)
 Inline void
 sil_wrw_bem(uint32_t *mem, uint32_t data)
 {
-	*((volatile uint32_t *) mem) = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
+  data = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
+  *((volatile uint32_t *) mem) = data;
+  SilCallWriteHook(4,(uint32)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRW_BEM */

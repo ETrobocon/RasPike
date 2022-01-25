@@ -6,8 +6,10 @@
 #include "vdev_if.h"
 #include "devconfig.h"
 
-#include "vdev_com_udp.h"
 #include "vdev_private.h"
+#include "vdev_com_udp.h"
+#include "vdev_com_serial.h"
+
 
 /* assume this area is cleared by C runtime */
 unsigned char athrill_vdev_mem[VDEV_RX_DATA_SIZE+VDEV_TX_FLAG_SIZE+VDEV_TX_FLAG_SIZE];
@@ -22,8 +24,14 @@ static const VdevIfComMethod VdevComUDP = {
   .receive = vdevUdpReceive
 };
 
+static const VdevIfComMethod VdevComSerial = {
+  .init = vdevSerialInit,
+  .send = vdevSerialSend,
+  .receive = vdevSerialReceive
+};
 
 #include "vdev_prot_athrill.h"
+#include "vdev_prot_raspike.h"
 static const VdevProtocolHandler *current_prot = 0;
 
 /* Athrillと同じ形式のハンドラ*/
@@ -31,6 +39,13 @@ static const VdevProtocolHandler vdevProtAthrill = {
   .init = vdevProtAthrillInit
 
 };
+
+/* RasPi / SPIKE用コマンド*/
+static const VdevProtocolHandler vdevProtRaspike = {
+  .init = vdevProtRaspikeInit
+
+};
+
 
 
 int initialize_vdev(void)
@@ -50,7 +65,8 @@ int initialize_vdev(void)
   if (cpuemu_get_devcfg_string("DEVICE_CONFIG_VDEV_COM", &comMethod) == STD_E_OK) {
     if ( !strcmp(comMethod,"UDP") ) {
       current_com = &VdevComUDP;
-    } else {
+    } else if ( !strcmp(comMethod,"SERIAL")) {
+      current_com = &VdevComSerial;
     }
   }
 
@@ -64,7 +80,8 @@ int initialize_vdev(void)
   if (cpuemu_get_devcfg_string("DEVICE_CONFIG_VDEV_PROTOCOL", &comMethod) == STD_E_OK) {
     if ( !strcmp(comMethod,"ATHRILL") ) {
       current_prot = &vdevProtAthrill;
-    } else {
+    } else if ( !strcmp(comMethod,"RASPIKE") ) {
+      current_prot = &vdevProtRaspike;
     }
   }
 

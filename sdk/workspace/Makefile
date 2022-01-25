@@ -16,9 +16,8 @@ include $(APPLDIR)/Makefile.inc
 endif
 
 start: appdir
-	#athrill2 -c1 -m $(APLDIR)/memory.txt -d $(APLDIR)/device_config.txt -t -1 asp
 	$(ADDITIONAL_PRE_APPL)
-	athrill2 -c1 -m ../common/memory.txt -d ../common/device_config.txt -t -1 asp
+	env LD_PRELOAD=../../../raspi_simple_setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
 
 debug: appdir
 	$(ADDITIONAL_PRE_APPL)

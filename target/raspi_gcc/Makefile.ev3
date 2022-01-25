@@ -21,6 +21,7 @@ APPL_COBJS += gpio_dri.o
 APPL_COBJS += athrill_serial_driver.o
 APPL_COBJS += athrill-libgcc.o
 APPL_COBJS += vdev.o vdev_com_udp.o vdev_prot_athrill.o
+APPL_COBJS += vdev_com_serial.o vdev_prot_raspike.o
 APPL_COBJS += athrill_mpthread.o
 APPL_COBJS += udp_comm.o
 

@@ -32,7 +32,7 @@ static uint64 get_time_from_previous_sending(void)
 
 
 
-static Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, uint8_t data);
+static Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, const void* data);
 
 static Std_ReturnType vdev_thread_do_init(MpthrIdType id);
 static Std_ReturnType vdev_thread_do_proc(MpthrIdType id);
@@ -90,7 +90,7 @@ int vdevProtAthrillInit(const VdevIfComMethod *com)
 }
 
 /* IOメモリへの書き込み */
-Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, uint8_t data)
+Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, const void* data)
 {
   if ( size != 1 ) return STD_E_OK;
 
