@@ -13,7 +13,7 @@
 
 static const VdevIfComMethod *cur_com = 0;
 
-struct timespec previous_sent = {0};
+static struct timespec previous_sent = {0};
 
 static uint64 unity_start_time = 0;
 static MpthrIdType vdev_thrid;

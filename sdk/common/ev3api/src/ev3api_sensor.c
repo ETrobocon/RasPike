@@ -26,6 +26,8 @@ static uint8_t get_sensor_index(sensor_port_t port, sensor_type_t type);
  * NONE_SENSOR = not connected
  */
 static sensor_type_t sensors[TNUM_SENSOR_PORT];
+static uint8_t sensor_modes[TNUM_SENSOR_PORT] = {-1,-1,-1,-1};
+
 
 static const analog_data_t *pAnalogSensorData = NULL;
 
@@ -103,6 +105,15 @@ static uint8_t get_sensor_index(sensor_port_t port, sensor_type_t type)
 	return -1;
 }
 
+static void set_sensor_mode(sensor_port_t port, uint8_t mode)
+{
+  if (sensor_modes[port] != mode) {
+    uart_dri_set_sensor_mode(port,mode);
+    sensor_modes[port] = mode;
+  }
+}
+  
+
 void _initialize_ev3api_sensor() {
 	// TODO: Thread safe
 	sensors[EV3_PORT_1]   = NONE_SENSOR;
@@ -121,6 +132,13 @@ ER ev3_sensor_config(sensor_port_t port, sensor_type_t type)
 	ER ercd;
 	CHECK_PORT(port);
 
+
+	/* RaSpike: send config when config is changed */
+	if ( sensors[port] != type ) {
+	  uart_dri_config_sensor(port,type);
+	  uart_dri_set_sensor_mode(port,-1);
+	}
+	
 	sensors[port] = type;
 	ercd = E_OK;
 
@@ -155,6 +173,9 @@ colorid_t ev3_color_sensor_get_color(sensor_port_t port) {
 	CHECK_COND(ev3_sensor_get_type(port) == COLOR_SENSOR, E_OBJ);
 
 	colorid_t val = COLOR_NONE;
+	/* RaSpike */
+	set_sensor_mode(port,COL_COLOR);
+	
 	uart_sensor_fetch_data(port, COL_COLOR, &val, sizeof(val));
 	assert(val >= COLOR_NONE && val < TNUM_COLOR);
     return val;
@@ -172,6 +193,8 @@ uint8_t ev3_color_sensor_get_reflect(sensor_port_t port) {
 	CHECK_COND(ev3_sensor_get_type(port) == COLOR_SENSOR, E_OBJ);
 
 	uint8_t val;
+	/* RaSpike */
+	set_sensor_mode(port,COL_REFLECT);
 	uart_sensor_fetch_data(port, COL_REFLECT, &val, sizeof(val));
     return val;
 
@@ -188,6 +211,9 @@ uint8_t ev3_color_sensor_get_ambient(sensor_port_t port) {
 	CHECK_COND(ev3_sensor_get_type(port) == COLOR_SENSOR, E_OBJ);
 
 	uint8_t val;
+	/* RaSpike */
+	set_sensor_mode(port,COL_AMBIENT);
+
 	uart_sensor_fetch_data(port, COL_AMBIENT, &val, sizeof(val));
     return val;
 
@@ -202,6 +228,9 @@ void ev3_color_sensor_get_rgb_raw(sensor_port_t port, rgb_raw_t *val) {
 //	lazy_initialize();
 	CHECK_PORT(port);
 	CHECK_COND(ev3_sensor_get_type(port) == COLOR_SENSOR, E_OBJ);
+
+	/* RaSpike */
+	set_sensor_mode(port,COL_REFLECT);
 
 	uart_sensor_fetch_data(port, COL_RGBRAW, val, sizeof(rgb_raw_t));
 
@@ -226,6 +255,9 @@ int16_t ev3_gyro_sensor_get_angle(sensor_port_t port) {
 	CHECK_COND(ev3_sensor_get_type(port) == GYRO_SENSOR, E_OBJ);
 
 	int16_t val;
+	/* RaSpike */
+	set_sensor_mode(port,GYRO_ANG);
+
 	uart_sensor_fetch_data(port, GYRO_ANG, &val, sizeof(val));
     return val;
 
@@ -242,6 +274,9 @@ int16_t ev3_gyro_sensor_get_rate(sensor_port_t port) {
 	CHECK_COND(ev3_sensor_get_type(port) == GYRO_SENSOR, E_OBJ);
 
 	int16_t val;
+	/* RaSpike */
+	set_sensor_mode(port,GYRO_RATE);
+
 	uart_sensor_fetch_data(port, GYRO_RATE, &val, sizeof(val));
     return val;
 
@@ -284,6 +319,10 @@ int16_t ev3_ultrasonic_sensor_get_distance(sensor_port_t port) {
     return ev3_uart_sensor_get_short(port) / 10;
 #endif
 	int16_t val = COLOR_NONE;
+
+	/* RaSpike */
+	set_sensor_mode(port,US_DIST_CM);
+
 	uart_sensor_fetch_data(port, US_DIST_CM, &val, sizeof(val));
     return val / 10;
 

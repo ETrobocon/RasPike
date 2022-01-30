@@ -12,4 +12,7 @@ extern void uart_dri_get_data_accel(uint8_t mode, void *dest, SIZE size);
 extern void uart_dri_get_data_temp(uint8_t mode, void *dest, SIZE size);
 extern void uart_dri_get_data_battery(uint8_t mode, void *dest, SIZE size);
 
+extern void uart_dri_config_sensor(uint8_t port, uint8_t config);
+extern void uart_dri_set_sensort_mode(uint8_t port, uint8_t mode);
+
 #endif /* _UART_DRI_H_ */

@@ -153,3 +153,15 @@ void uart_dri_get_data_battery(uint8_t mode, void *dest, SIZE size)
 	return;
 
 }
+
+void uart_dri_config_sensor(uint8_t port, uint8_t config)
+{
+  sil_wrw_mem((uint32_t *)EV3_SENSOR_CONFIG_INX(port),config);
+
+}
+
+
+void uart_dri_set_sensor_mode(uint8_t port, uint8_t mode)
+{
+  sil_wrw_mem((uint32_t *)EV3_SENSOR_MODE_INX(port),mode);
+}

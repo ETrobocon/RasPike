@@ -49,7 +49,9 @@ ER_UINT extsvc_motor_command(intptr_t cmd, intptr_t size, intptr_t par3, intptr_
 
 	switch (cmd_value) {
 	case opOUTPUT_SET_TYPE:
-		/* nothing to do */
+	  /* configure motor sensor */
+	  sil_wrw_mem((uint32_t *)EV3_MOTOR_CONFIG_INX(cmdp[1]),20);
+	  
 		break;
 	case opOUTPUT_STOP:
 		motor_brake(cmdp[1], cmdp[2]);

@@ -23,7 +23,7 @@ float get_target_distance(float target_x_posision, float target_y_posision){
 
 void main_task(intptr_t unused) {
 
-    ev3_sensor_config(EV3_PORT_1,GYRO_SENSOR);
+    ev3_sensor_config(EV3_PORT_1,COLOR_SENSOR);
     ev3_motor_config(EV3_PORT_A,LARGE_MOTOR);
     ev3_motor_set_power(EV3_PORT_A,20);
     int i = 0;
@@ -33,6 +33,13 @@ void main_task(intptr_t unused) {
     int diff = -100.0;
     ev3_lcd_draw_string("TESTSTRING",0,0);
 
+    while(1) {
+      i ++;
+      ev3_motor_set_power(EV3_PORT_A,20+i%5);
+      ev3_color_sensor_get_reflect(EV3_PORT_1);
+      tslp_tsk(30*1000);
+    }
+    
     while(1) {
 	diff+=i;
 	error = (100-i)*0.85;
@@ -45,7 +52,8 @@ void main_task(intptr_t unused) {
 	  	ev3_gyro_sensor_reset(EV3_PORT_1);
 		  ev3_motor_reset_counts(EV3_PORT_A);
 	    }
-
+	  
+	  
       syslog(LOG_NOTICE,"----------");
 	distance = get_target_distance(steer,error); 
         syslog(LOG_NOTICE,"distance=%d",distance);

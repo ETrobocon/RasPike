@@ -72,9 +72,13 @@ ER ev3_motor_config(motor_port_t port, motor_type_t type) {
      */
     char buf[TNUM_MOTOR_PORT + 1];
     buf[0] = opOUTPUT_SET_TYPE;
+    /* RaSpike */
+    /*
     for (i = EV3_PORT_A; i < TNUM_MOTOR_PORT; ++i) {
         buf[i + 1] = getDevType(mts[i]);
     }
+    */
+    buf[1] = port;
     motor_command(buf, sizeof(buf));
 
     /*

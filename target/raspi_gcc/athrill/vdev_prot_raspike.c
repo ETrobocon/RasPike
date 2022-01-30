@@ -11,6 +11,11 @@
 #include "vdev_private.h"
 #include "target_kernel_impl.h"
 
+static uint32 reset_area_off = 0;
+static uint32 reset_area_size  = 0; 
+
+
+
 static sigset_t prev_sigset;
 static void lock_task(void)
 {
@@ -74,6 +79,14 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
   /* デバイスIOに書き込んだ際に呼ばれるコールバック関数 */
   SilSetWriteHook(vdevProtRaspikeSilCb);
 
+  // Reset Area
+  err = cpuemu_get_devcfg_value("DEVICE_CONFIG_RESET_AREA_OFFSET", &reset_area_off);
+  printf("DEVICE_CONFIG_RESET_AREA_OFFSET=%d\n",reset_area_off);
+  
+  err = cpuemu_get_devcfg_value("DEVICE_CONFIG_RESET_AREA_SIZE", &reset_area_size);
+  printf("DEVICE_CONFIG_RESET_AREA_SIZE=%d\n",reset_area_size);
+
+  
 #if 0  
   mpthread_init();
 
@@ -86,6 +99,21 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
   return 0;
 }  
 
+static struct timespec previous_sent = {0};
+
+static void save_sent_time(void)
+{
+	clock_gettime(CLOCK_MONOTONIC,&previous_sent);
+}
+
+static uint32 get_time_from_previous_sending(void)
+{
+	struct timespec cur;
+	clock_gettime(CLOCK_MONOTONIC,&cur);
+	return (uint32)((uint64)(cur.tv_sec-previous_sent.tv_sec)*1000000000 + (uint64)cur.tv_nsec-(uint64)previous_sent.tv_nsec)/1000000;
+}
+
+
 /* IOメモリへの書き込み */
 Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 {
@@ -96,6 +124,11 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
   if (addr == VDEV_TX_FLAG(0)) {
     static char previous_sent_buffer[VDEV_TX_DATA_SIZE/4];
 
+    if ( previous_sent.tv_sec == 0 ) {
+      save_sent_time();
+    }
+    printf("Time:%d\n",get_time_from_previous_sending());
+    
     // Check Difference
     int i;
     int num = 0;
@@ -112,12 +145,19 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
       curMem++;
       prevMem++;
     }
+    // Clear reset area
+    if ( reset_area_off && reset_area_size ) {
+      memset((char*)(VDEV_TX_DATA_BASE+reset_area_off),0,reset_area_size);
+    }
 
+    
     if ( num == 0 ) return STD_E_OK;
     send_command.com_header.cmd = 1;
     send_command.num = num;
     len = cur_com->send(&send_command,sizeof(RaspikeHeader)+sizeof(uint32_t)+sizeof(RaspikeBodyElement)*num);
+    printf("Sent\n");
 
+    
   }
   return STD_E_OK;
 #if 0  
