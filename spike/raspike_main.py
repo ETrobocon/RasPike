@@ -1,0 +1,459 @@
+# LEGO type:standard slot:5 autostart
+
+import time
+import re
+import hub
+import struct
+from spike import Motor
+from spike import DistanceSensor
+from spike import ColorSensor
+from spike import ForceSensor
+import uasyncio
+import gc
+
+DONT_CARE=-1
+UNDEFINED=-2
+
+
+
+# シリアルポートの設定
+spike_serial_port = "D"
+# EV3RTとのポートマッピング
+# 構成するロボットに合わせてマッピングを設定する
+# EV3RTに合わせているので、モーター、センサーそれぞれ最大４種類しか使えないことに注意
+# 内部的には全てSPIKEのポートに合わせていることに注意
+spike_port_map = {
+# EV3PORT : SPIKEPORT
+    "1":"F",
+    "2":"E",
+    "3":"C",
+    "4":"D",
+    "A":"A",
+    "B":"C",
+    "C":"C",
+    "D":"D"
+}
+
+
+# ここからは内部変数
+# SPIKEポートセンサーのコンフィグ。センサーのCONFIGが行われた場合、これを埋めていく
+# 配列の中身は 対応するコンフィグ（センサー種別),モード,通知インデックス
+# モードの値で0のものがあり、raspi側から更新されないことがあるため、デフォルトを0とする
+spike_port_sensor_config = {
+    "A":[UNDEFINED,0,UNDEFINED],
+    "B":[UNDEFINED,0,UNDEFINED],
+    "C":[UNDEFINED,0,UNDEFINED],
+    "D":[UNDEFINED,0,UNDEFINED],
+    "E":[UNDEFINED,0,UNDEFINED],
+    "F":[UNDEFINED,0,UNDEFINED],
+}
+
+numof_sensors = 0
+
+# ポートのステータス。0の場合は何もなし。他はリセット中などの意味を示す
+# リセット処理が終わらないうちに値の更新をした場合に、前の値が取れるのを防ぐ仕組み
+spike_port_status = {
+    "A":0,
+    "B":0,
+    "C":0,
+    "D":0,
+    "E":0,
+    "F":0
+
+}
+
+
+
+# 送信バッファの用意（動的に取らないようにここで取っておく)
+# 最大は 1024/4 * 8 + 4 + 4
+#sendData = bytearray(int(1024/4*8+4+4))
+#sendData[0:3] = struct.pack('4s','RSRX')
+
+def setLEDGPIO(port,value):
+    print("GPIO is not supported")
+
+def setMotorPower(port,value):
+    getattr(hub.port,port).motor.run_at_speed(value)
+#    getattr(hub.port,port).motor.start(speed=value)
+
+def setMotorStop(port,value):
+    #TODO:stop action
+    getattr(hub.port,port).motor.stop()
+
+
+async def resetMotorAngleTask(port,value):
+    global spike_port_status
+    if ( value != 0 ):
+        print("motor reset")
+        Motor(port).set_degrees_counted(0)
+        #　リセットが終わったことを示す
+        spike_port_status[port] = 0 
+
+
+
+def resetMotorAngle(port,value):
+    global spike_port_status
+    #set_degrees_countedは呼び出しに200msecかかるため、非同期呼び出しとする
+    #リセット中であることを示す
+    spike_port_status[port] = 1 
+    uasyncio.create_task(resetMotorAngleTask(port,value))
+
+#    getattr(hub.port,port).motor.set_degrees_counted(value)
+
+# センサーの数を数える（構成が変わった時だけにカウントを行う)
+def calculate_sensors():
+    num = 0
+    global numof_sensors
+    for port,elem in spike_port_sensor_config.items():
+        if ( len(elem) == 3 and elem[2] >= 0 ):
+            num = num+1
+    numof_sensors = num
+    print("Sensors=%d" %(numof_sensors))
+    return num
+
+
+# Sensor 
+
+# Sensor コンフィグが呼ばれた時に実行。読み出すべきポートの設定を行う
+# モードが存在しないセンサーの場合は、ここで実行するSensorのindexが決まる
+def configureSensor(port,config):
+    global spike_port_sensor_config
+    spike_port_sensor_config[port] = [config,0,UNDEFINED]
+    index = getSensorMapIndex(config,port,0)
+    spike_port_sensor_config[port][2] = index
+    print("Config: port=%s config=%d index=%d" %(port,config,index))
+    calculate_sensors()
+
+# Modeを切り替えた時に実行される
+def setSensorMode(port,mode):
+    global spike_port_sensor_config
+    if ( spike_port_sensor_config[port][1] == mode or spike_port_sensor_config[port][2] < 0 ):
+        spike_port_sensor_config[port][1] = mode
+        index = getSensorMapIndex(spike_port_sensor_config[port][0],port,mode)
+        spike_port_sensor_config[port][2] = index
+        print("Mode: port=%s config=%d mode=%d index=%d" %(port,spike_port_sensor_config[port][0],mode,index))
+        calculate_sensors()
+
+# Motorのconfig
+def configureMotor(port,config):
+    configureSensor(port,config)
+        
+
+def getColorAmbient(port):
+    return ColorSensor(port).get_ambient_light()
+
+def getColorReflect(port):
+    val = ColorSensor(port).get_reflected_light()
+#    print ("Port=%s val=%d" %(port,val))
+    return val
+
+def getColorRGB(port):
+    (red,green,blue) = ColorSensor(port).get_rgb_intensity()
+    # SPIKEはセンサー値が0-1024なので、EV3RTに合わせて0-256にする（不要?)
+    return (int(red/4),int(green/4),int(blue/4))
+
+# EV3RTのカラーにマップ
+color_map = {
+    'black':1,
+    'violet':8, #EV3にない値
+    'blue':2,
+    'cyan':9, #EV3にない値
+    'green':3,
+    'yellow':4,
+    'red':5,
+    'white':6
+}
+
+def getColorColor(port):
+    val = ColorSensor(port).get_color()
+    if ( val == NULL or (val not in color_map)):
+        return 0 # NONE
+    return int(color_map[val])
+
+def getTouchSensor(port):
+    if (ForceSensor(port).is_pressed()):
+        return 2048
+    else:
+        return 0
+
+def getMotorAngle(port):
+    val = Motor(port).get_degrees_counted()
+#    print("MA %s=%d" %(port,val))
+    return Motor(port).get_degrees_counted()
+
+
+
+
+
+# SPIKEが受信するコマンドのフォーマット
+# INDEX,[サイズ,デバッグ用文字列,コールバック関数,引数]
+receive_schema = {
+    "0":[4,"LEDGPIO",setLEDGPIO,""],
+    "4":[4,"POWER_A",setMotorPower,spike_port_map['A']],
+    "8":[4,"POWER_B",setMotorPower,spike_port_map['B']],
+    "12":[4,"POWER_C",setMotorPower,spike_port_map['C']],
+    "16":[4,"POWER_D",setMotorPower,spike_port_map['D']],
+    "20":[4,"STOP_A",setMotorStop,spike_port_map['A']],
+    "24":[4,"STOP_B",setMotorStop,spike_port_map['B']],
+    "28":[4,"STOP_C",setMotorStop,spike_port_map["C"]],
+    "32":[4,"STOP_D",setMotorStop,spike_port_map["D"]],
+    "36":[4,"RESET_ANGLE_A",resetMotorAngle,spike_port_map['A']],
+    "40":[4,"RESET_ANGLE_B",resetMotorAngle,spike_port_map['B']],
+    "44":[4,"RESET_ANGLE_C",resetMotorAngle,spike_port_map['C']],
+    "48":[4,"RESET_ANGLE_D",resetMotorAngle,spike_port_map['D']],
+    "52":[4,"RESET_GYRO"],
+    "56":[4,"COLOR_SENSOR_MODE"],
+    "224":[4,"SENSOR_PORT_1 CONFIG",configureSensor,spike_port_map['1']],
+    "228":[4,"SENSOR_PORT_2 CONFIG",configureSensor,spike_port_map['2']],
+    "232":[4,"SENSOR_PORT_3 CONFIG",configureSensor,spike_port_map['3']],
+    "236":[4,"SENSOR_PORT_4 CONFIG",configureSensor,spike_port_map['4']],
+    "240":[4,"SENSOR_PORT_1 MODE",setSensorMode,spike_port_map['1']],
+    "244":[4,"SENSOR_PORT_2 MODE",setSensorMode,spike_port_map['2']],
+    "248":[4,"SENSOR_PORT_3 MODE",setSensorMode,spike_port_map['3']],
+    "252":[4,"SENSOR_PORT_4 MODE",setSensorMode,spike_port_map['4']],
+    "256":[4,"MOTOR_PORT_A CONFIG",configureMotor,spike_port_map['A']],
+    "260":[4,"MOTOR_PORT_B CONFIG",configureMotor,spike_port_map['B']],
+    "264":[4,"MOTOR_PORT_C CONFIG",configureMotor,spike_port_map['C']],
+    "268":[4,"MOTOR_PORT_D CONFIG",configureMotor,spike_port_map['D']],
+    
+}
+
+def getUltrasonic(port):
+    return DistanceSensor(port).get_distance_cm()
+
+def undefined(port):
+    print("Notsupported:")
+
+# SPIKEが送信するコマンドのフォーマット
+# [コンフィグ,ポート,mode,デバッグ用文字列,コールバック,INDEX]
+# ポート：PORT1-4 -> 0-3
+# コンフィグ:sensor_type_tの値
+# モード: -1　は関係なし
+# COLOR_SENSOR
+# 	DRI_COL_REFLECT = 0,
+#	DRI_COL_AMBIENT = 1,
+#	DRI_COL_COLOR   = 2,
+#	DRI_COL_RGBRAW  = 4,
+sensor_map = [
+    # 0:NONE_SENSOR
+    [0],
+    # 1: ULTRASONIC_SENSOR mode 0:normal 2:listen
+    [1,DONT_CARE,0,"ULTRASONIC",getUltrasonic,88],
+    [1,DONT_CARE,2,"ULTRASONIC_LISTEN",undefined,92],
+
+    # 2: GYRO_SENSOR  
+    [2,DONT_CARE,DONT_CARE,"GYRO_SENSOR",undefined,28],
+
+    # TODO:Support Multi config
+    # 3: TOUCH_SENSOR
+    [3,DONT_CARE,DONT_CARE,"TOUCH_SENSOR",getTouchSensor,112],
+
+    # 4: COLOR_SENSOR
+    [4,DONT_CARE,1,"COLOR_AMBIENT",getColorAmbient,4],
+    [4,DONT_CARE,2,"COLOR_COLOR",getColorColor,8],
+    [4,DONT_CARE,0,"COLOR_REFLECT",getColorReflect,12],
+    [4,DONT_CARE,4,"COLOR_RGB",getColorRGB,16],
+
+    # 20: Motor : RASPIKE用に作成したもの
+    [20,spike_port_map['A'],DONT_CARE,"MOTOR_A",getMotorAngle,256],
+    [20,spike_port_map['B'],DONT_CARE,"MOTOR_B",getMotorAngle,260],
+    [20,spike_port_map['C'],DONT_CARE,"MOTOR_C",getMotorAngle,264],
+    [20,spike_port_map['D'],DONT_CARE,"MOTOR_D",getMotorAngle,268],
+    
+]
+
+# ポートとモードから使用するsensor_mapのインデックスを求める
+def getSensorMapIndex(type,port,mode):
+#    if ( port not in sensor_map ):
+#        return
+    for index,elem in enumerate(sensor_map):
+        # Check Sensor Type
+        if ( type != elem[0]):
+            continue
+        # Check Port
+        if ( elem[1] == DONT_CARE or elem[1] == port ):
+            if ( int(elem[2]) == DONT_CARE  or elem[2] == mode ):
+                return index
+
+    return -1
+
+
+#sender_receiver = {
+#    "4" : [4,0,4,1,"COLOR_AMBIENT",getColorAmbient,]
+#}
+
+#receive_schema["4"][2](receive_schema["4"][3],30)
+#motor = Motor('A')
+#motor.start_at_power(30)
+
+
+
+
+def wait_serial_ready():
+    while True:
+        reply = ser.read(1000)
+        print(reply)
+        if reply == b'':
+            break
+
+def stop():
+    r_motor.brake()
+    l_motor.brake()
+
+async def wait_read(ser,size):
+    cur_size = 0
+    ret = bytearray()
+    while True:
+        buf = ser.read(size-cur_size)
+        if ( buf == b'' or buf == None):
+            await uasyncio.sleep_ms(1)
+            continue
+
+        ret=ret+buf
+        cur_size = len(ret)
+        if ( cur_size == size ):
+            return ret
+
+
+async def wait_header():
+    while True:
+        val = await wait_read(ser,4)
+        if ( val[0] == b'' ):
+            await uasyncio.sleep_ms(1)
+            continue
+        if (val.decode() == "RSTX"):
+            return
+        else:
+            break
+    print("Header Recovery Mode")
+    while True:
+        val = await wait_read(ser,1)
+        if ( val[0] == b'' ):
+            continue
+        if ( val.decode() != 'R'):
+            continue
+        val = await wait_read(ser,1)
+        if ( val.decode() != 'S'):
+            continue
+        val = await wait_read(ser,1)
+        if ( val.decode() != 'T'):
+            continue
+        val = await wait_read(ser,1)
+        if ( val.decode() != 'X'):
+            continue
+        return
+
+
+
+async def receiver():
+
+    print(" -- start")
+    start_flag = True
+    throttle = 0
+    steer = 0
+    previous_send_time = 0;
+
+    if True:
+        while True:
+            await uasyncio.sleep_ms(0)
+            #SKIP until header is "RSTX"
+            await wait_header()
+
+#            header = val.decode()
+
+#            print("***["+str(time.ticks_us()/1000000)+"]")
+
+#            if ( header != "RSTX" ):
+#                recover_header()
+
+
+            #read command
+            cmd = int.from_bytes(await wait_read(ser,4),'little')
+#            print("cmd=" +str(cmd))
+            if ( cmd == 1 ):
+                #通常コマンド
+                #通知数の取得
+                num = int.from_bytes(await wait_read(ser,4),'little')
+#                print("num:" + str(num))
+
+                for i in range(num):
+                    elem = await wait_read(ser,8)
+#                    cmd_id = int.from_bytes(wait_read(ser,4),'little')
+                    (cmd_id,value) = struct.unpack("<ii",elem)
+#                    print('cmd=%d,value=%d' %(cmd_id,value))
+                    if ( value < -2048 or value > 2048):
+                        print("Value is invalid")
+                        break
+
+                    if ( str(cmd_id) not in receive_schema):
+                        break
+                    action = receive_schema[str(cmd_id)]
+                    if ( len(action) > 2 ):
+                             # do action
+                             action[2](action[3],value)
+            else:
+                continue
+
+
+
+                             
+
+async def notifySensorValues():
+    print("Start Sensors")
+    while True:
+        # 次の更新タイミング  ここでは10msec
+        next_time = time.ticks_us() + 20*1000
+#        numof_sensors = calculate_sensors()
+#        print("Collect Sensors num=%d" %(numof_sensors))
+        if ( True ):
+            for port,elem in spike_port_sensor_config.items():
+#                print("config port=%s config=%d index=%d" %(port,elem[0],elem[2]))
+                if ( len(elem) == 3 and int(elem[2]) >= 0):
+                    send_elem = sensor_map[int(elem[2])]
+                    cmd_id = send_elem[5]
+                    # Call Sensor Action and Get Value
+                    val = send_elem[4](port)
+                    # Pack Data
+                    if ( isinstance(val,tuple) ):
+                        for i,d in val:
+                            sendData = "@{:0=4}:{:0=6}".format(int(send_elem[5]+i*4),val)
+                            #print(sendData)
+                            ser.write(sendData)
+                    else :
+                        sendData = "@{:0=4}:{:0=6}".format(int(cmd_id),val)
+                        #print(sendData)
+                        ser.write(sendData)
+
+        time_diff = next_time - time.ticks_us()
+#        print("timediff={}".format(time_diff))
+        if ( time_diff < 0 ):
+            time_diff = 0
+
+        await uasyncio.sleep_ms(int(time_diff/1000))
+
+
+async def main_task():
+    uasyncio.create_task(notifySensorValues())
+    uasyncio.create_task(receiver())
+    await uasyncio.sleep(120)
+
+
+
+if True:
+
+    print(" -- serial init -- ")
+    ser = getattr(hub.port,spike_serial_port)
+
+    ser.mode(hub.port.MODE_FULL_DUPLEX)
+    time.sleep(1)
+    ser.baud(115200)
+
+    for x in dir(ser):
+        print(x)
+
+
+
+    wait_serial_ready()
+
+    uasyncio.run(main_task())
+
