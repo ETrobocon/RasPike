@@ -55,6 +55,7 @@ static RaspikeCommand send_command;
 static RaspikeHeader common_header;
 
 static const VdevIfComMethod *cur_com = 0;
+static MpthrIdType vdev_thrid;
 
 static Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void* data);
 
@@ -87,15 +88,12 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
   printf("DEVICE_CONFIG_RESET_AREA_SIZE=%d\n",reset_area_size);
 
   
-#if 0  
   mpthread_init();
 
   err = mpthread_register(&vdev_thrid, &vdev_op);
-  ASSERT(err == STD_E_OK);
 
   err = mpthread_start_proc(vdev_thrid);
-  ASSERT(err == STD_E_OK);
-#endif  
+
   return 0;
 }  
 
@@ -127,7 +125,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     if ( previous_sent.tv_sec == 0 ) {
       save_sent_time();
     }
-    printf("Time:%d\n",get_time_from_previous_sending());
+    //    printf("Time:%d\n",get_time_from_previous_sending());
     
     // Check Difference
     int i;
@@ -155,7 +153,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     send_command.com_header.cmd = 1;
     send_command.num = num;
     len = cur_com->send(&send_command,sizeof(RaspikeHeader)+sizeof(uint32_t)+sizeof(RaspikeBodyElement)*num);
-    printf("Sent\n");
+    //    printf("Sent\n");
 
     
   }
@@ -194,4 +192,62 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
   //printf("Command Write Success cmd_id=%d size=%d val=%d\n",cmd_id,size,*(int*)data);
 #endif
   return STD_E_OK;
+}
+
+/* 受信スレッド */
+static Std_ReturnType vdev_thread_do_init(MpthrIdType id)
+{
+  /* 受信用スレッドでsignalを受けると、ON_STACKの判定が効かなくなるため、受信プロセスではsignalを受け取らないようにする*/
+  sigset_t sigset;
+  sigemptyset(&sigset);
+  sigaddset(&sigset,SIGUSR2);
+  sigaddset(&sigset,SIGALRM);
+  sigprocmask(SIG_BLOCK, &sigset, NULL);
+
+  return STD_E_OK;
+}
+
+#define RASPIKE_RX_SIZE (11)
+static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
+{
+	Std_ReturnType err;
+	//	uint32 off = VDEV_RX_DATA_BASE - VDEV_BASE;
+	uint64 curr_stime;
+	char buf[256];
+	int cmd_id;
+	int val;
+
+	memset(buf,0,sizeof(buf));
+	
+	while (1) {
+
+	  /* Find header @ */
+	  while (1) {
+	    err = cur_com->receive(buf,1);
+	    if ( buf[0] == '@' ) {
+	      break;
+	    }
+	  }
+	  err = cur_com->receive(buf,RASPIKE_RX_SIZE);	  
+
+	  
+	  if (err != STD_E_OK) {
+	    continue;
+	  }
+	  //	  printf("Not=%s",buf);
+	  sscanf(buf,"%d:%d",&cmd_id,&val);
+	  //	  printf("cmd=%d val=%d\n",cmd_id,val);
+	  if ( cmd_id < 0 || cmd_id >= (VDEV_RX_DATA_SIZE-VDEV_RX_DATA_BODY_OFF )) {
+	    printf("cmd value error\n!");
+	    continue;
+	  }
+
+	  char *p = VDEV_RX_DATA_BASE + cmd_id;
+
+	  *(unsigned int*)p = *(unsigned int*)&val;
+	  
+	}
+
+	return STD_E_OK;
+
 }

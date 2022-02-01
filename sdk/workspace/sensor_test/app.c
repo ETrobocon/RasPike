@@ -25,7 +25,9 @@ void main_task(intptr_t unused) {
 
     ev3_sensor_config(EV3_PORT_1,COLOR_SENSOR);
     ev3_motor_config(EV3_PORT_A,LARGE_MOTOR);
-    ev3_motor_set_power(EV3_PORT_A,20);
+    ev3_motor_config(EV3_PORT_B,LARGE_MOTOR);
+    //ev3_motor_set_power(EV3_PORT_A,20);
+
     int i = 0;
     float steer;
     float error;
@@ -36,7 +38,10 @@ void main_task(intptr_t unused) {
     while(1) {
       i ++;
       ev3_motor_set_power(EV3_PORT_A,20+i%5);
-      ev3_color_sensor_get_reflect(EV3_PORT_1);
+      //    ev3_motor_set_power(EV3_PORT_B,20+i%5);
+      printf("Sensor=%d\n",ev3_color_sensor_get_reflect(EV3_PORT_1));
+      printf("Motor=%d\n",ev3_motor_get_counts(EV3_PORT_A));
+      
       tslp_tsk(30*1000);
     }
     

@@ -27,6 +27,7 @@ Std_ReturnType vdevSerialInit(void)
 {
   Std_ReturnType err;
   char *dev_name = "/dev/ttyAMA1";
+
   struct termios tio;                 // シリアル通信設定
   
   err = cpuemu_get_devcfg_string("VDEV_SERIAL_DEV_NAME",&dev_name);
@@ -80,5 +81,19 @@ Std_ReturnType vdevSerialSend(const unsigned char *buf, int len)
 
 Std_ReturnType vdevSerialReceive(unsigned char *buf, int len)
 {
+
+  Std_ReturnType err;
+
+  do {
+    err = read(device_fd,buf,len);
+  } while ( err == 0 );
+   
+  if ( err != len ) {
+    printf("Read Error err=%d\n",errno);
+    return -1;
+  }
+  return STD_E_OK;
+
+  
   return STD_E_OK;
 }
