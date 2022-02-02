@@ -300,13 +300,32 @@ def stop():
     r_motor.brake()
     l_motor.brake()
 
+
+def wait_read2(ser,size):
+    while True:
+        buf = ser.read(size)
+        if ( buf == b'' or buf == None):
+#            await uasyncio.sleep_ms(0)
+            continue
+        return buf
+
+
+
 async def wait_read(ser,size):
+    while True:
+        buf = ser.read(size)
+        if ( buf == b'' or buf == None):
+#            await uasyncio.sleep_ms(0)
+            continue
+        return buf
+
+
     cur_size = 0
     ret = bytearray()
     while True:
         buf = ser.read(size-cur_size)
         if ( buf == b'' or buf == None):
-            await uasyncio.sleep_ms(1)
+            await uasyncio.sleep_ms(0)
             continue
 
         ret=ret+buf
@@ -315,33 +334,41 @@ async def wait_read(ser,size):
             return ret
 
 
-async def wait_header():
+async def wait_cmd():
+# ヘッダバイト(1st bitが1)であれば読み直す
     while True:
-        val = await wait_read(ser,4)
-        if ( val[0] == b'' ):
-            await uasyncio.sleep_ms(1)
-            continue
-        if (val.decode() == "RSTX"):
-            return
-        else:
-            break
-    print("Header Recovery Mode")
-    while True:
-        val = await wait_read(ser,1)
-        if ( val[0] == b'' ):
-            continue
-        if ( val.decode() != 'R'):
-            continue
-        val = await wait_read(ser,1)
-        if ( val.decode() != 'S'):
-            continue
-        val = await wait_read(ser,1)
-        if ( val.decode() != 'T'):
-            continue
-        val = await wait_read(ser,1)
-        if ( val.decode() != 'X'):
-            continue
-        return
+        val = 0
+        while True:
+            val = int.from_bytes(wait_read2(ser,1),'big')
+#            print ("Head=%x" %(head))
+            if (val & 0x80 ):
+                # Found Header
+#                print("Header Found")
+                break
+            
+        # Get ID
+        while True:
+
+            idx = (val & 0x7f)
+            
+            val = int.from_bytes(wait_read2(ser,1),'big')
+            if ( val & 0x80 ):
+                print ("data1 broken")
+                continue
+            data1 = val
+
+            val = int.from_bytes(wait_read2(ser,1),'big')
+            if ( val & 0x80 ):
+                print ("data2 broken")
+                continue
+            data2 = val
+            ret_id = idx * 4
+            ret_data = (((data1&0x3f)<<7) | data2)
+            # check +/-
+            if ( data1 & 0x40 ):
+                ret_data = ret_data*(-1)
+
+            return (ret_id ,ret_data)
 
 
 
@@ -349,48 +376,63 @@ async def receiver():
 
     print(" -- start")
     start_flag = True
-    throttle = 0
-    steer = 0
     previous_send_time = 0;
-
+    value = 0
+    cmd_id = 0
     if True:
         while True:
             await uasyncio.sleep_ms(0)
             #SKIP until header is "RSTX"
-            await wait_header()
+#            (cmd_id,value) = await wait_cmd()
 
-#            header = val.decode()
+            # ヘッダバイト(1st bitが1)であれば読み直す
+            
+            val = 0
+            while True:
+                val = int.from_bytes(await wait_read(ser,1),'big')
+#                   print ("Head=%x" %(head))
+                if (val & 0x80 ):
+                    # Found Header
+#                print("Header Found")
+                    break
+            
+                # Get ID
+            while True:
 
-#            print("***["+str(time.ticks_us()/1000000)+"]")
+                idx = (val & 0x7f)
+            
+                val = int.from_bytes(await wait_read(ser,1),'big')
+                if ( val & 0x80 ):
+                    print ("data1 broken")
+                    continue
+                data1 = val
 
-#            if ( header != "RSTX" ):
-#                recover_header()
+                val = int.from_bytes(await wait_read(ser,1),'big')
+                if ( val & 0x80 ):
+                    print ("data2 broken")
+                    continue
+                data2 = val
 
+                cmd_id = idx * 4
+                value = (((data1&0x3f)<<7) | data2)
+            # check +/-
+                if ( data1 & 0x40 ):
+                    ret_data = ret_data*(-1)
+                
+                break
+           
+ #           print('cmd=%d,value=%d' %(cmd_id,value))
+            if ( value < -2048 or value > 2048):
+                print("Value is invalid")
+                break
 
-            #read command
-            cmd = int.from_bytes(await wait_read(ser,4),'little')
-#            print("cmd=" +str(cmd))
-            if ( cmd == 1 ):
-                #通常コマンド
-                #通知数の取得
-                num = int.from_bytes(await wait_read(ser,4),'little')
-#                print("num:" + str(num))
-
-                for i in range(num):
-                    elem = await wait_read(ser,8)
-#                    cmd_id = int.from_bytes(wait_read(ser,4),'little')
-                    (cmd_id,value) = struct.unpack("<ii",elem)
-#                    print('cmd=%d,value=%d' %(cmd_id,value))
-                    if ( value < -2048 or value > 2048):
-                        print("Value is invalid")
-                        break
-
-                    if ( str(cmd_id) not in receive_schema):
-                        break
-                    action = receive_schema[str(cmd_id)]
-                    if ( len(action) > 2 ):
-                             # do action
-                             action[2](action[3],value)
+            if ( str(cmd_id) not in receive_schema):
+                break
+            
+            action = receive_schema[str(cmd_id)]
+            if ( len(action) > 2 ):
+             # do action
+                 action[2](action[3],value)
             else:
                 continue
 
