@@ -120,6 +120,11 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
   if ( size != 1 ) return STD_E_OK;
 
   if (addr == VDEV_TX_FLAG(0)) {
+
+    unsigned char buf[4];
+    
+
+
     static char previous_sent_buffer[VDEV_TX_DATA_SIZE/4];
 
     if ( previous_sent.tv_sec == 0 ) {
@@ -133,6 +138,30 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     // unsigned int access
     unsigned int *curMem = (unsigned int *)(VDEV_TX_DATA_BASE);
     unsigned int *prevMem = (unsigned int *)previous_sent_buffer;
+
+    for ( i = 0; i < VDEV_TX_DATA_BODY_SIZE/4; i++ ) {
+      if ( *curMem != *prevMem ) {
+	int cmd = 1; /* cmd 1 (command)
+	/* Message Byte. First Bit is On */
+	buf[0] = (0x80|(i&0x7f));
+	/* following bytes do not use First Bit */
+	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
+	
+	buf[1] = (((*curMem)>>7) & 0x3f);
+	if ( *(int*)curMem < 0 ) {
+	  buf[1] |= 0x40; /* Minus Bit */
+	}
+	buf[2] = (0x7f & *curMem);
+	len = cur_com->send(buf,sizeof(buf));
+	*prevMem = *curMem;
+      }
+      curMem++;
+      prevMem++;
+
+    }
+	
+
+#if 0 /* Old Version */
     for ( i = 0; i < VDEV_TX_DATA_BODY_SIZE/4; i++ ) {
       if ( *curMem != *prevMem ) {
 	send_command.elements[num].cmd_id = i * 4;
@@ -143,55 +172,25 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
       curMem++;
       prevMem++;
     }
+#endif
+    
     // Clear reset area
     if ( reset_area_off && reset_area_size ) {
       memset((char*)(VDEV_TX_DATA_BASE+reset_area_off),0,reset_area_size);
     }
 
-    
+#if 0    
     if ( num == 0 ) return STD_E_OK;
     send_command.com_header.cmd = 1;
     send_command.num = num;
     len = cur_com->send(&send_command,sizeof(RaspikeHeader)+sizeof(uint32_t)+sizeof(RaspikeBodyElement)*num);
+#endif
     //    printf("Sent\n");
 
     
   }
   return STD_E_OK;
-#if 0  
-  if ( addr < VDEV_TX_DATA_BASE || addr >= VDEV_TX_DATA_BASE + VDEV_TX_DATA_BODY_SIZE) {
-    return STD_E_OK;
-  }
-  if ( size != 4 ) return STD_E_OK;
-  memcpy(&header,&common_header,sizeof(common_header));
-  header.com_header.cmd = 1;
-  header.elem_num = 1;
 
-  lock_task();
-  len = cur_com->send(&header,sizeof(header));
- 
-  if ( len != STD_E_OK ) {
-    printf("Write Header Error errno=%d\n",errno);
-    exit(-1);
-  }
-
-  RaspikeBodyElement body;
-
-  int cmd_id = addr - VDEV_TX_DATA_BASE;
-  body.cmd_id = cmd_id;
-  memcpy(body.buf,data,size);
-  int send_size = sizeof(body.cmd_id)+size;
-  
-  len = cur_com->send(&body,send_size);
-
-  unlock_task();
-  if ( len != STD_E_OK ) {
-    printf("Write Command Body Error ret=%d sendsize=%d errno=%d",len,send_size,errno);
-    exit(-1);
-  }
-  //printf("Command Write Success cmd_id=%d size=%d val=%d\n",cmd_id,size,*(int*)data);
-#endif
-  return STD_E_OK;
 }
 
 /* 受信スレッド */
