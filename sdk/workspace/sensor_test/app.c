@@ -38,11 +38,13 @@ void main_task(intptr_t unused) {
     while(1) {
       i ++;
       ev3_motor_set_power(EV3_PORT_A,20+i%5);
+      ev3_motor_set_power(EV3_PORT_B,50+i%5);      
       //    ev3_motor_set_power(EV3_PORT_B,20+i%5);
       printf("Sensor=%d\n",ev3_color_sensor_get_reflect(EV3_PORT_1));
-      printf("Motor=%d\n",ev3_motor_get_counts(EV3_PORT_A));
+      printf("MotorA=%d\n",ev3_motor_get_counts(EV3_PORT_A));
+      printf("MotorB=%d\n",ev3_motor_get_counts(EV3_PORT_B));
       
-      tslp_tsk(30*1000);
+      tslp_tsk(20*1000);
     }
     
     while(1) {
@@ -62,7 +64,7 @@ void main_task(intptr_t unused) {
       syslog(LOG_NOTICE,"----------");
 	distance = get_target_distance(steer,error); 
         syslog(LOG_NOTICE,"distance=%d",distance);
-	tslp_tsk(500000);
+	tslp_tsk(10*000);
    }
 }
 

@@ -111,6 +111,22 @@ static uint32 get_time_from_previous_sending(void)
 	return (uint32)((uint64)(cur.tv_sec-previous_sent.tv_sec)*1000000000 + (uint64)cur.tv_nsec-(uint64)previous_sent.tv_nsec)/1000000;
 }
 
+static void disable_interrupt(sigset_t *old)
+{
+  sigset_t sigset;
+  sigemptyset(&sigset);
+
+  sigaddset(&sigset,SIGUSR2);
+  sigaddset(&sigset,SIGALRM);
+  sigaddset(&sigset,SIGPOLL);
+  sigprocmask(SIG_BLOCK, &sigset, old);
+  return;
+}
+
+static void enable_interrupt(sigset_t *to_set)
+{
+  sigprocmask(SIG_SETMASK,to_set,NULL);
+}
 
 /* IOメモリへの書き込み */
 Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
@@ -120,11 +136,9 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
   if ( size != 1 ) return STD_E_OK;
 
   if (addr == VDEV_TX_FLAG(0)) {
-
-    unsigned char buf[4];
+    sigset_t old_set;
+    disable_interrupt(&old_set);
     
-
-
     static char previous_sent_buffer[VDEV_TX_DATA_SIZE/4];
 
     if ( previous_sent.tv_sec == 0 ) {
@@ -138,27 +152,37 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     // unsigned int access
     unsigned int *curMem = (unsigned int *)(VDEV_TX_DATA_BASE);
     unsigned int *prevMem = (unsigned int *)previous_sent_buffer;
-
+    char buf[3*256];
+    int k = 0;
     for ( i = 0; i < VDEV_TX_DATA_BODY_SIZE/4; i++ ) {
+
       if ( *curMem != *prevMem ) {
 	int cmd = 1; /* cmd 1 (command)
 	/* Message Byte. First Bit is On */
-	buf[0] = (0x80|(i&0x7f));
+	buf[k] = (0x80|(i&0x7f));
 	/* following bytes do not use First Bit */
 	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
-	
-	buf[1] = (((*curMem)>>7) & 0x3f);
+	k++;
+	buf[k] = (((*curMem)>>7) & 0x1f);
 	if ( *(int*)curMem < 0 ) {
-	  buf[1] |= 0x40; /* Minus Bit */
+	  buf[k] |= 0x20; /* Minus Bit */
 	}
-	buf[2] = (0x7f & *curMem);
-	len = cur_com->send(buf,sizeof(buf));
+	k++;
+	buf[k] = (0x7f & *curMem);
+	
+	//	len = cur_com->send(buf,sizeof(buf));
 	*prevMem = *curMem;
+	k++;
       }
       curMem++;
       prevMem++;
 
     }
+    if ( k != 0 ) {
+      len = cur_com->send(buf,k);
+    }
+      
+    enable_interrupt(&old_set);      
 	
 
 #if 0 /* Old Version */
@@ -197,12 +221,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 static Std_ReturnType vdev_thread_do_init(MpthrIdType id)
 {
   /* 受信用スレッドでsignalを受けると、ON_STACKの判定が効かなくなるため、受信プロセスではsignalを受け取らないようにする*/
-  sigset_t sigset;
-  sigemptyset(&sigset);
-  sigaddset(&sigset,SIGUSR2);
-  sigaddset(&sigset,SIGALRM);
-  sigprocmask(SIG_BLOCK, &sigset, NULL);
-
+  disable_interrupt(NULL);
   return STD_E_OK;
 }
 
@@ -241,7 +260,7 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	    continue;
 	  }
 
-	  char *p = VDEV_RX_DATA_BASE + cmd_id;
+	  char *p = VDEV_RX_DATA_BASE + cmd_id*4;
 
 	  *(unsigned int*)p = *(unsigned int*)&val;
 	  
