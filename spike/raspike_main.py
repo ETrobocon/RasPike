@@ -189,32 +189,32 @@ def getMotorAngle(port):
 # INDEX,[サイズ,デバッグ用文字列,コールバック関数,引数]
 receive_schema = {
     "0":[4,"LEDGPIO",setLEDGPIO,""],
-    "4":[4,"POWER_A",setMotorPower,spike_port_map['A']],
-    "8":[4,"POWER_B",setMotorPower,spike_port_map['B']],
-    "12":[4,"POWER_C",setMotorPower,spike_port_map['C']],
-    "16":[4,"POWER_D",setMotorPower,spike_port_map['D']],
-    "20":[4,"STOP_A",setMotorStop,spike_port_map['A']],
-    "24":[4,"STOP_B",setMotorStop,spike_port_map['B']],
-    "28":[4,"STOP_C",setMotorStop,spike_port_map["C"]],
-    "32":[4,"STOP_D",setMotorStop,spike_port_map["D"]],
-    "36":[4,"RESET_ANGLE_A",resetMotorAngle,spike_port_map['A']],
-    "40":[4,"RESET_ANGLE_B",resetMotorAngle,spike_port_map['B']],
-    "44":[4,"RESET_ANGLE_C",resetMotorAngle,spike_port_map['C']],
-    "48":[4,"RESET_ANGLE_D",resetMotorAngle,spike_port_map['D']],
-    "52":[4,"RESET_GYRO"],
-    "56":[4,"COLOR_SENSOR_MODE"],
-    "224":[4,"SENSOR_PORT_1 CONFIG",configureSensor,spike_port_map['1']],
-    "228":[4,"SENSOR_PORT_2 CONFIG",configureSensor,spike_port_map['2']],
-    "232":[4,"SENSOR_PORT_3 CONFIG",configureSensor,spike_port_map['3']],
-    "236":[4,"SENSOR_PORT_4 CONFIG",configureSensor,spike_port_map['4']],
-    "240":[4,"SENSOR_PORT_1 MODE",setSensorMode,spike_port_map['1']],
-    "244":[4,"SENSOR_PORT_2 MODE",setSensorMode,spike_port_map['2']],
-    "248":[4,"SENSOR_PORT_3 MODE",setSensorMode,spike_port_map['3']],
-    "252":[4,"SENSOR_PORT_4 MODE",setSensorMode,spike_port_map['4']],
-    "256":[4,"MOTOR_PORT_A CONFIG",configureMotor,spike_port_map['A']],
-    "260":[4,"MOTOR_PORT_B CONFIG",configureMotor,spike_port_map['B']],
-    "264":[4,"MOTOR_PORT_C CONFIG",configureMotor,spike_port_map['C']],
-    "268":[4,"MOTOR_PORT_D CONFIG",configureMotor,spike_port_map['D']],
+    "1":[4,"POWER_A",setMotorPower,spike_port_map['A']],
+    "2":[4,"POWER_B",setMotorPower,spike_port_map['B']],
+    "3":[4,"POWER_C",setMotorPower,spike_port_map['C']],
+    "4":[4,"POWER_D",setMotorPower,spike_port_map['D']],
+    "5":[4,"STOP_A",setMotorStop,spike_port_map['A']],
+    "6":[4,"STOP_B",setMotorStop,spike_port_map['B']],
+    "7":[4,"STOP_C",setMotorStop,spike_port_map["C"]],
+    "8":[4,"STOP_D",setMotorStop,spike_port_map["D"]],
+    "9":[4,"RESET_ANGLE_A",resetMotorAngle,spike_port_map['A']],
+    "10":[4,"RESET_ANGLE_B",resetMotorAngle,spike_port_map['B']],
+    "11":[4,"RESET_ANGLE_C",resetMotorAngle,spike_port_map['C']],
+    "12":[4,"RESET_ANGLE_D",resetMotorAngle,spike_port_map['D']],
+    "13":[4,"RESET_GYRO"],
+    "14":[4,"COLOR_SENSOR_MODE"],
+    "56":[4,"SENSOR_PORT_1 CONFIG",configureSensor,spike_port_map['1']],
+    "57":[4,"SENSOR_PORT_2 CONFIG",configureSensor,spike_port_map['2']],
+    "58":[4,"SENSOR_PORT_3 CONFIG",configureSensor,spike_port_map['3']],
+    "59":[4,"SENSOR_PORT_4 CONFIG",configureSensor,spike_port_map['4']],
+    "60":[4,"SENSOR_PORT_1 MODE",setSensorMode,spike_port_map['1']],
+    "61":[4,"SENSOR_PORT_2 MODE",setSensorMode,spike_port_map['2']],
+    "62":[4,"SENSOR_PORT_3 MODE",setSensorMode,spike_port_map['3']],
+    "63":[4,"SENSOR_PORT_4 MODE",setSensorMode,spike_port_map['4']],
+    "64":[4,"MOTOR_PORT_A CONFIG",configureMotor,spike_port_map['A']],
+    "65":[4,"MOTOR_PORT_B CONFIG",configureMotor,spike_port_map['B']],
+    "66":[4,"MOTOR_PORT_C CONFIG",configureMotor,spike_port_map['C']],
+    "67":[4,"MOTOR_PORT_D CONFIG",configureMotor,spike_port_map['D']],
     
 }
 
@@ -238,27 +238,27 @@ sensor_map = [
     # 0:NONE_SENSOR
     [0],
     # 1: ULTRASONIC_SENSOR mode 0:normal 2:listen
-    [1,DONT_CARE,0,"ULTRASONIC",getUltrasonic,88],
-    [1,DONT_CARE,2,"ULTRASONIC_LISTEN",undefined,92],
+    [1,DONT_CARE,0,"ULTRASONIC",getUltrasonic,22],
+    [1,DONT_CARE,2,"ULTRASONIC_LISTEN",undefined,23],
 
     # 2: GYRO_SENSOR  
-    [2,DONT_CARE,DONT_CARE,"GYRO_SENSOR",undefined,28],
+    [2,DONT_CARE,DONT_CARE,"GYRO_SENSOR",undefined,7],
 
     # TODO:Support Multi config
     # 3: TOUCH_SENSOR
-    [3,DONT_CARE,DONT_CARE,"TOUCH_SENSOR",getTouchSensor,112],
+    [3,DONT_CARE,DONT_CARE,"TOUCH_SENSOR",getTouchSensor,28],
 
     # 4: COLOR_SENSOR
-    [4,DONT_CARE,1,"COLOR_AMBIENT",getColorAmbient,4],
-    [4,DONT_CARE,2,"COLOR_COLOR",getColorColor,8],
-    [4,DONT_CARE,0,"COLOR_REFLECT",getColorReflect,12],
-    [4,DONT_CARE,4,"COLOR_RGB",getColorRGB,16],
+    [4,DONT_CARE,1,"COLOR_AMBIENT",getColorAmbient,1],
+    [4,DONT_CARE,2,"COLOR_COLOR",getColorColor,2],
+    [4,DONT_CARE,0,"COLOR_REFLECT",getColorReflect,3],
+    [4,DONT_CARE,4,"COLOR_RGB",getColorRGB,4],
 
     # 20: Motor : RASPIKE用に作成したもの
-    [20,spike_port_map['A'],DONT_CARE,"MOTOR_A",getMotorAngle,256],
-    [20,spike_port_map['B'],DONT_CARE,"MOTOR_B",getMotorAngle,260],
-    [20,spike_port_map['C'],DONT_CARE,"MOTOR_C",getMotorAngle,264],
-    [20,spike_port_map['D'],DONT_CARE,"MOTOR_D",getMotorAngle,268],
+    [20,spike_port_map['A'],DONT_CARE,"MOTOR_A",getMotorAngle,64],
+    [20,spike_port_map['B'],DONT_CARE,"MOTOR_B",getMotorAngle,65],
+    [20,spike_port_map['C'],DONT_CARE,"MOTOR_C",getMotorAngle,66],
+    [20,spike_port_map['D'],DONT_CARE,"MOTOR_D",getMotorAngle,67],
     
 ]
 
@@ -337,6 +337,9 @@ async def wait_read(ser,size):
 async def wait_cmd():
 # ヘッダバイト(1st bitが1)であれば読み直す
     while True:
+        numcom = 0
+        success = 0
+        fail = 0
         val = 0
         while True:
             val = int.from_bytes(wait_read2(ser,1),'big')
@@ -354,15 +357,17 @@ async def wait_cmd():
             val = int.from_bytes(wait_read2(ser,1),'big')
             if ( val & 0x80 ):
                 print ("data1 broken")
+                fail = fail + 1
                 continue
             data1 = val
 
             val = int.from_bytes(wait_read2(ser,1),'big')
             if ( val & 0x80 ):
                 print ("data2 broken")
+                fail = fail + 1
                 continue
             data2 = val
-            ret_id = idx * 4
+            ret_id = idx
             ret_data = (((data1&0x3f)<<7) | data2)
             # check +/-
             if ( data1 & 0x40 ):
@@ -387,47 +392,45 @@ async def receiver():
 
             # ヘッダバイト(1st bitが1)であれば読み直す
             
-            val = 0
+            cmd = 0
             while True:
-                val = int.from_bytes(await wait_read(ser,1),'big')
+                cmd = int.from_bytes(await wait_read(ser,1),'big')
 #                   print ("Head=%x" %(head))
-                if (val & 0x80 ):
+                if (cmd & 0x80 ):
                     # Found Header
 #                print("Header Found")
                     break
             
                 # Get ID
             while True:
-
-                idx = (val & 0x7f)
-            
-                val = int.from_bytes(await wait_read(ser,1),'big')
-                if ( val & 0x80 ):
+                data1 = int.from_bytes(await wait_read(ser,1),'big')
+                if ( data1 & 0x80 ):
+                    cmd = data1
                     print ("data1 broken")
                     continue
-                data1 = val
+                idx = (cmd & 0x7f)
 
-                val = int.from_bytes(await wait_read(ser,1),'big')
-                if ( val & 0x80 ):
+                data2 = int.from_bytes(await wait_read(ser,1),'big')
+                if ( data2 & 0x80 ):
+                    cmd = data2
                     print ("data2 broken")
                     continue
-                data2 = val
 
-                cmd_id = idx * 4
-                value = (((data1&0x3f)<<7) | data2)
+                cmd_id = idx
+                value = (((data1&0x1f)<<7) | data2)
             # check +/-
-                if ( data1 & 0x40 ):
-                    ret_data = ret_data*(-1)
+                if ( data1 & 0x20 ):
+                    value = value*(-1)
                 
                 break
            
- #           print('cmd=%d,value=%d' %(cmd_id,value))
+            print('cmd=%d,value=%d' %(cmd_id,value))
             if ( value < -2048 or value > 2048):
                 print("Value is invalid")
-                break
+                continue
 
             if ( str(cmd_id) not in receive_schema):
-                break
+                continue
             
             action = receive_schema[str(cmd_id)]
             if ( len(action) > 2 ):
@@ -478,6 +481,7 @@ async def main_task():
     uasyncio.create_task(notifySensorValues())
     uasyncio.create_task(receiver())
     await uasyncio.sleep(120)
+    print ("Time Over")
 
 
 
