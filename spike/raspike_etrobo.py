@@ -1,5 +1,4 @@
 # LEGO type:standard slot:2 autostart
-
 import time
 import re
 import hub
@@ -58,18 +57,26 @@ async def wait_read(ser,size):
     while True:
         buf = ser.read(size)
         if ( buf == b'' or buf == None):
+            await uasyncio.sleep_ms(0)
             continue
 #        print("Val=%d" %(int.from_bytes(buf,'big')))
         return buf
 
+num_command = 0
+num_fail = 0
+prev_time = time.ticks_us()
+count = 0
+sum_time = 0
 
 async def receiver():
+    global num_command,num_fail,count,sum_time,prev_time
 
     print(" -- start")
     start_flag = True
     previous_send_time = 0;
     value = 0
     cmd_id = 0
+
     global color_sensor_mode
     if True:
         while True:
@@ -87,16 +94,19 @@ async def receiver():
                 # Get ID
             while True:
                 data1 = int.from_bytes(await wait_read(ser,1),'big')
+                num_command = num_command + 1
                 if ( data1 & 0x80 ):
                     cmd = data1
-                    print ("data1 broken")
+                    num_fail = num_fail + 1
+#                    print ("data1 broken")
                     continue
                 idx = (cmd & 0x7f)
 
                 data2 = int.from_bytes(await wait_read(ser,1),'big')
                 if ( data2 & 0x80 ):
                     cmd = data2
-                    print ("data2 broken")
+                    num_fail = num_fail + 1                    
+#                    print ("data2 broken")
                     continue
 
                 cmd_id = idx
@@ -107,9 +117,10 @@ async def receiver():
                 
                 break
            
-            print('cmd=%d,value=%d' %(cmd_id,value))
+            #print('cmd=%d,value=%d' %(cmd_id,value))
             if ( value < -2048 or value > 2048):
-                print("Value is invalid")
+#                print("Value is invalid")
+                num_fail = num_fail + 1
                 continue
 
             # 高速化のために、motorスピードを優先して判定する
@@ -119,6 +130,10 @@ async def receiver():
                 motor_B.pwm(value)
             elif (cmd_id == 3):
                 motor_C.pwm(value)
+            #    count = count + 1
+            #    now = time.ticks_us()
+            #    sum_time = sum_time + (now - prev_time)
+            #    prev_time = now
             elif (cmd_id == 5):
                 if (value == 1):
                     motor_A.brake()
@@ -194,13 +209,21 @@ async def notifySensorValues():
             time_diff = 0
         await uasyncio.sleep_ms(int(time_diff/1000))
 
+def stop_all():
+    motor_A.pwm(0)
+    motor_B.pwm(0)
+    motor_C.pwm(0)
+
+
 async def main_task():
     gc.collect()
     uasyncio.create_task(notifySensorValues())
     uasyncio.create_task(receiver())
     await uasyncio.sleep(120)
-    print ("Time Over")
-
+    global num_command,num_fail,count,sum_time,count
+    print ("Time Over command=%d fail=%d" %(num_command,num_fail))
+#    print ("period = %dmsec num=%d" %((sum_time/count)/1000,count))
+    stop_all()
 
 
 if True:
