@@ -33,6 +33,8 @@ main(int argc, const char *argv[])
 	if ( deviceStartupCb ) {
 	  int ret = (*deviceStartupCb)();
 	}
+
+	sleep(1);
 	
 	target_main();
 }

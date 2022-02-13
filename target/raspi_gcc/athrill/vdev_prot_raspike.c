@@ -128,6 +128,13 @@ static void enable_interrupt(sigset_t *to_set)
   sigprocmask(SIG_SETMASK,to_set,NULL);
 }
 
+
+/* コンフィグ系のものを先に送るため、送信順を制御する*/
+static int send_order[VDEV_TX_DATA_SIZE/4] =
+  {56,57,58,59,60,61,62,63,64,65,66,67,0,1,2,3,4,5,6,7,8,9,10,11,12,13};
+
+#define numof(table) (sizeof(table)/sizeof(table[0]))
+
 /* IOメモリへの書き込み */
 Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 {
@@ -139,7 +146,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     sigset_t old_set;
     disable_interrupt(&old_set);
     
-    static char previous_sent_buffer[VDEV_TX_DATA_SIZE/4];
+    static char previous_sent_buffer[VDEV_TX_DATA_SIZE];
 
     if ( previous_sent.tv_sec == 0 ) {
       save_sent_time();
@@ -154,21 +161,25 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     unsigned int *prevMem = (unsigned int *)previous_sent_buffer;
     char buf[3*256];
     int k = 0;
-    for ( i = 0; i < VDEV_TX_DATA_BODY_SIZE/4; i++ ) {
-
+    for ( i = 0; i < numof(send_order); i++ ) {
+      int send_idx = send_order[i];
+      curMem = (unsigned int *)(VDEV_TX_DATA_BASE) + send_idx;
+      prevMem =  (unsigned int *)previous_sent_buffer + send_idx;
       if ( *curMem != *prevMem ) {
-	int cmd = 1; /* cmd 1 (command)
+	int cmd = 1; /* cmd 1 (command) */
+	int value = abs(*(int*)curMem);
+	
 	/* Message Byte. First Bit is On */
-	buf[k] = (0x80|(i&0x7f));
+	buf[k] = (0x80|(send_idx&0x7f));
 	/* following bytes do not use First Bit */
 	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
 	k++;
-	buf[k] = (((*curMem)>>7) & 0x1f);
+	buf[k] = (((value)>>7) & 0x1f);
 	if ( *(int*)curMem < 0 ) {
 	  buf[k] |= 0x20; /* Minus Bit */
 	}
 	k++;
-	buf[k] = (0x7f & *curMem);
+	buf[k] = (0x7f & value);
 	
 	//	len = cur_com->send(buf,sizeof(buf));
 	*prevMem = *curMem;

@@ -51,7 +51,7 @@ ER_UINT extsvc_motor_command(intptr_t cmd, intptr_t size, intptr_t par3, intptr_
 	case opOUTPUT_SET_TYPE:
 	  /* configure motor sensor */
 	  sil_wrw_mem((uint32_t *)EV3_MOTOR_CONFIG_INX(cmdp[1]),20);
-	  
+	  printf("Motor Config Port=%d indx=%d\n",cmdp[1],EV3_MOTOR_CONFIG_OFF_TYPE(cmdp[1]));
 		break;
 	case opOUTPUT_STOP:
 		motor_brake(cmdp[1], cmdp[2]);
