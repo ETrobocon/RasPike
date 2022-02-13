@@ -24,13 +24,13 @@ spike_serial_port = "D"
 # 内部的には全てSPIKEのポートに合わせていることに注意
 spike_port_map = {
 # EV3PORT : SPIKEPORT
-    "1":"F",
+    "1":"B",
     "2":"E",
     "3":"C",
     "4":"D",
     "A":"A",
     "B":"C",
-    "C":"C",
+    "C":"E",
     "D":"D"
 }
 
@@ -49,6 +49,16 @@ spike_port_sensor_config = {
 }
 
 numof_sensors = 0
+
+#device objects [0]:motor object [1]:sensot object
+device_objects = {
+    "A":[0,0],
+    "B":[0,0],
+    "C":[0,0],
+    "D":[0,0],
+    "E":[0,0],
+    "F":[0,0]
+}
 
 # ポートのステータス。0の場合は何もなし。他はリセット中などの意味を示す
 # リセット処理が終わらないうちに値の更新をした場合に、前の値が取れるのを防ぐ仕組み
@@ -69,16 +79,17 @@ spike_port_status = {
 #sendData = bytearray(int(1024/4*8+4+4))
 #sendData[0:3] = struct.pack('4s','RSRX')
 
-def setLEDGPIO(port,value):
+def setLEDGPIO(port,device,value):
     print("GPIO is not supported")
 
-def setMotorPower(port,value):
-    getattr(hub.port,port).motor.run_at_speed(value)
+def setMotorPower(port,device,value):
+    
+    device.run_at_speed(value)
 #    getattr(hub.port,port).motor.start(speed=value)
 
-def setMotorStop(port,value):
+def setMotorStop(port,device,value):
     #TODO:stop action
-    getattr(hub.port,port).motor.stop()
+    device.stop()
 
 
 async def resetMotorAngleTask(port,value):
@@ -91,7 +102,7 @@ async def resetMotorAngleTask(port,value):
 
 
 
-def resetMotorAngle(port,value):
+def resetMotorAngle(port,device,value):
     global spike_port_status
     #set_degrees_countedは呼び出しに200msecかかるため、非同期呼び出しとする
     #リセット中であることを示す
@@ -116,16 +127,20 @@ def calculate_sensors():
 
 # Sensor コンフィグが呼ばれた時に実行。読み出すべきポートの設定を行う
 # モードが存在しないセンサーの場合は、ここで実行するSensorのindexが決まる
-def configureSensor(port,config):
+def configureSensor(port,device,config):
     global spike_port_sensor_config
     spike_port_sensor_config[port] = [config,0,UNDEFINED]
     index = getSensorMapIndex(config,port,0)
     spike_port_sensor_config[port][2] = index
     print("Config: port=%s config=%d index=%d" %(port,config,index))
     calculate_sensors()
+    device_objects[port][1] = getattr(hub.port,port).device
+    if ( index != -1 ):
+        device_objects[port][1].mode(sensor_map[index][6])
+
 
 # Modeを切り替えた時に実行される
-def setSensorMode(port,mode):
+def setSensorMode(port,device,mode):
     global spike_port_sensor_config
     if ( spike_port_sensor_config[port][1] == mode or spike_port_sensor_config[port][2] < 0 ):
         spike_port_sensor_config[port][1] = mode
@@ -133,22 +148,25 @@ def setSensorMode(port,mode):
         spike_port_sensor_config[port][2] = index
         print("Mode: port=%s config=%d mode=%d index=%d" %(port,spike_port_sensor_config[port][0],mode,index))
         calculate_sensors()
+        if ( index != -1 ):
+            device_objects[port][1].mode(sensor_map[index][6])
 
 # Motorのconfig
-def configureMotor(port,config):
-    configureSensor(port,config)
+def configureMotor(port,device,config):
+    device_objects[port][0] = getattr(hub.port,port).motor
+    configureSensor(port,device_objects[port][0],config)
         
 
-def getColorAmbient(port):
-    return ColorSensor(port).get_ambient_light()
+def getColorAmbient(port,device):
+    return device.get()
 
-def getColorReflect(port):
-    val = ColorSensor(port).get_reflected_light()
+def getColorReflect(port,device):
+    val = device.get()
 #    print ("Port=%s val=%d" %(port,val))
     return val
 
 def getColorRGB(port):
-    (red,green,blue) = ColorSensor(port).get_rgb_intensity()
+    (red,green,blue) = device.get()
     # SPIKEはセンサー値が0-1024なので、EV3RTに合わせて0-256にする（不要?)
     return (int(red/4),int(green/4),int(blue/4))
 
@@ -164,22 +182,23 @@ color_map = {
     'white':6
 }
 
-def getColorColor(port):
-    val = ColorSensor(port).get_color()
+def getColorColor(port,device):
+    val = device.get()
     if ( val == NULL or (val not in color_map)):
         return 0 # NONE
     return int(color_map[val])
 
-def getTouchSensor(port):
-    if (ForceSensor(port).is_pressed()):
+def getTouchSensor(port,device):
+    if (device.get()):
         return 2048
     else:
         return 0
 
-def getMotorAngle(port):
-    val = Motor(port).get_degrees_counted()
+def getMotorAngle(port,device):
+    return device.get()
+#    val = Motor(port).get_degrees_counted()
 #    print("MA %s=%d" %(port,val))
-    return Motor(port).get_degrees_counted()
+#    return Motor(port).get_degrees_counted()
 
 
 
@@ -188,40 +207,41 @@ def getMotorAngle(port):
 # SPIKEが受信するコマンドのフォーマット
 # INDEX,[サイズ,デバッグ用文字列,コールバック関数,引数]
 receive_schema = {
-    "0":[4,"LEDGPIO",setLEDGPIO,""],
-    "1":[4,"POWER_A",setMotorPower,spike_port_map['A']],
-    "2":[4,"POWER_B",setMotorPower,spike_port_map['B']],
-    "3":[4,"POWER_C",setMotorPower,spike_port_map['C']],
-    "4":[4,"POWER_D",setMotorPower,spike_port_map['D']],
-    "5":[4,"STOP_A",setMotorStop,spike_port_map['A']],
-    "6":[4,"STOP_B",setMotorStop,spike_port_map['B']],
-    "7":[4,"STOP_C",setMotorStop,spike_port_map["C"]],
-    "8":[4,"STOP_D",setMotorStop,spike_port_map["D"]],
-    "9":[4,"RESET_ANGLE_A",resetMotorAngle,spike_port_map['A']],
-    "10":[4,"RESET_ANGLE_B",resetMotorAngle,spike_port_map['B']],
-    "11":[4,"RESET_ANGLE_C",resetMotorAngle,spike_port_map['C']],
-    "12":[4,"RESET_ANGLE_D",resetMotorAngle,spike_port_map['D']],
+    "0":[4,"LEDGPIO",setLEDGPIO,"",0],
+    "1":[4,"POWER_A",setMotorPower,spike_port_map['A'],0],
+    "2":[4,"POWER_B",setMotorPower,spike_port_map['B'],0],
+    "3":[4,"POWER_C",setMotorPower,spike_port_map['C'],0],
+    "4":[4,"POWER_D",setMotorPower,spike_port_map['D'],0],
+    "5":[4,"STOP_A",setMotorStop,spike_port_map['A'],0],
+    "6":[4,"STOP_B",setMotorStop,spike_port_map['B'],0],
+    "7":[4,"STOP_C",setMotorStop,spike_port_map["C"],0],
+    "8":[4,"STOP_D",setMotorStop,spike_port_map["D"],0],
+    "9":[4,"RESET_ANGLE_A",resetMotorAngle,spike_port_map['A'],0],
+    "10":[4,"RESET_ANGLE_B",resetMotorAngle,spike_port_map['B'],0],
+    "11":[4,"RESET_ANGLE_C",resetMotorAngle,spike_port_map['C'],0],
+    "12":[4,"RESET_ANGLE_D",resetMotorAngle,spike_port_map['D'],0],
     "13":[4,"RESET_GYRO"],
     "14":[4,"COLOR_SENSOR_MODE"],
-    "56":[4,"SENSOR_PORT_1 CONFIG",configureSensor,spike_port_map['1']],
-    "57":[4,"SENSOR_PORT_2 CONFIG",configureSensor,spike_port_map['2']],
-    "58":[4,"SENSOR_PORT_3 CONFIG",configureSensor,spike_port_map['3']],
-    "59":[4,"SENSOR_PORT_4 CONFIG",configureSensor,spike_port_map['4']],
-    "60":[4,"SENSOR_PORT_1 MODE",setSensorMode,spike_port_map['1']],
-    "61":[4,"SENSOR_PORT_2 MODE",setSensorMode,spike_port_map['2']],
-    "62":[4,"SENSOR_PORT_3 MODE",setSensorMode,spike_port_map['3']],
-    "63":[4,"SENSOR_PORT_4 MODE",setSensorMode,spike_port_map['4']],
-    "64":[4,"MOTOR_PORT_A CONFIG",configureMotor,spike_port_map['A']],
-    "65":[4,"MOTOR_PORT_B CONFIG",configureMotor,spike_port_map['B']],
-    "66":[4,"MOTOR_PORT_C CONFIG",configureMotor,spike_port_map['C']],
-    "67":[4,"MOTOR_PORT_D CONFIG",configureMotor,spike_port_map['D']],
+    "56":[4,"SENSOR_PORT_1 CONFIG",configureSensor,spike_port_map['1'],0],
+    "57":[4,"SENSOR_PORT_2 CONFIG",configureSensor,spike_port_map['2'],0],
+    "58":[4,"SENSOR_PORT_3 CONFIG",configureSensor,spike_port_map['3'],0],
+    "59":[4,"SENSOR_PORT_4 CONFIG",configureSensor,spike_port_map['4'],0],
+    "60":[4,"SENSOR_PORT_1 MODE",setSensorMode,spike_port_map['1'],0],
+    "61":[4,"SENSOR_PORT_2 MODE",setSensorMode,spike_port_map['2'],0],
+    "62":[4,"SENSOR_PORT_3 MODE",setSensorMode,spike_port_map['3'],0],
+    "63":[4,"SENSOR_PORT_4 MODE",setSensorMode,spike_port_map['4'],0],
+    "64":[4,"MOTOR_PORT_A CONFIG",configureMotor,spike_port_map['A'],0],
+    "65":[4,"MOTOR_PORT_B CONFIG",configureMotor,spike_port_map['B'],0],
+    "66":[4,"MOTOR_PORT_C CONFIG",configureMotor,spike_port_map['C'],0],
+    "67":[4,"MOTOR_PORT_D CONFIG",configureMotor,spike_port_map['D'],0],
     
 }
 
-def getUltrasonic(port):
-    return DistanceSensor(port).get_distance_cm()
+def getUltrasonic(port,device):
+    return device.get()
+#    return DistanceSensor(port).get_distance_cm()
 
-def undefined(port):
+def undefined(port,device):
     print("Notsupported:")
 
 # SPIKEが送信するコマンドのフォーマット
@@ -238,27 +258,27 @@ sensor_map = [
     # 0:NONE_SENSOR
     [0],
     # 1: ULTRASONIC_SENSOR mode 0:normal 2:listen
-    [1,DONT_CARE,0,"ULTRASONIC",getUltrasonic,22],
-    [1,DONT_CARE,2,"ULTRASONIC_LISTEN",undefined,23],
+    [1,DONT_CARE,0,"ULTRASONIC",getUltrasonic,22,0],
+    [1,DONT_CARE,2,"ULTRASONIC_LISTEN",undefined,23,0],
 
     # 2: GYRO_SENSOR  
-    [2,DONT_CARE,DONT_CARE,"GYRO_SENSOR",undefined,7],
+    [2,DONT_CARE,DONT_CARE,"GYRO_SENSOR",undefined,7,0],
 
     # TODO:Support Multi config
     # 3: TOUCH_SENSOR
-    [3,DONT_CARE,DONT_CARE,"TOUCH_SENSOR",getTouchSensor,28],
+    [3,DONT_CARE,DONT_CARE,"TOUCH_SENSOR",getTouchSensor,28,0],
 
     # 4: COLOR_SENSOR
-    [4,DONT_CARE,1,"COLOR_AMBIENT",getColorAmbient,1],
-    [4,DONT_CARE,2,"COLOR_COLOR",getColorColor,2],
-    [4,DONT_CARE,0,"COLOR_REFLECT",getColorReflect,3],
-    [4,DONT_CARE,4,"COLOR_RGB",getColorRGB,4],
+    [4,DONT_CARE,1,"COLOR_AMBIENT",getColorAmbient,1,0],
+    [4,DONT_CARE,2,"COLOR_COLOR",getColorColor,2,0],
+    [4,DONT_CARE,0,"COLOR_REFLECT",getColorReflect,3,1],
+    [4,DONT_CARE,4,"COLOR_RGB",getColorRGB,4,0],
 
     # 20: Motor : RASPIKE用に作成したもの
-    [20,spike_port_map['A'],DONT_CARE,"MOTOR_A",getMotorAngle,64],
-    [20,spike_port_map['B'],DONT_CARE,"MOTOR_B",getMotorAngle,65],
-    [20,spike_port_map['C'],DONT_CARE,"MOTOR_C",getMotorAngle,66],
-    [20,spike_port_map['D'],DONT_CARE,"MOTOR_D",getMotorAngle,67],
+    [20,spike_port_map['A'],DONT_CARE,"MOTOR_A",getMotorAngle,64,2],
+    [20,spike_port_map['B'],DONT_CARE,"MOTOR_B",getMotorAngle,65,2],
+    [20,spike_port_map['C'],DONT_CARE,"MOTOR_C",getMotorAngle,66,2],
+    [20,spike_port_map['D'],DONT_CARE,"MOTOR_D",getMotorAngle,67,2],
     
 ]
 
@@ -424,7 +444,7 @@ async def receiver():
                 
                 break
            
-            print('cmd=%d,value=%d' %(cmd_id,value))
+#            print('cmd=%d,value=%d' %(cmd_id,value))
             if ( value < -2048 or value > 2048):
                 print("Value is invalid")
                 continue
@@ -433,9 +453,9 @@ async def receiver():
                 continue
             
             action = receive_schema[str(cmd_id)]
-            if ( len(action) > 2 ):
+            if ( len(action) > 2 and action[3] != "" ):
              # do action
-                 action[2](action[3],value)
+                action[2](action[3],device_objects[action[3]][0],value)
             else:
                 continue
 
@@ -457,7 +477,7 @@ async def notifySensorValues():
                     send_elem = sensor_map[int(elem[2])]
                     cmd_id = send_elem[5]
                     # Call Sensor Action and Get Value
-                    val = send_elem[4](port)
+                    val = send_elem[4](port,device_objects[port][1])
                     # Pack Data
                     if ( isinstance(val,tuple) ):
                         for i,d in val:
@@ -465,7 +485,8 @@ async def notifySensorValues():
                             #print(sendData)
                             ser.write(sendData)
                     else :
-                        sendData = "@{:0=4}:{:0=6}".format(int(cmd_id),val)
+#                        print("Val=%s port=%s" %(val,port))
+                        sendData = "@{:0=4}:{:0=6}".format(int(cmd_id),val[0])
                         #print(sendData)
                         ser.write(sendData)
 
@@ -478,6 +499,7 @@ async def notifySensorValues():
 
 
 async def main_task():
+    gc.collect()
     uasyncio.create_task(notifySensorValues())
     uasyncio.create_task(receiver())
     await uasyncio.sleep(120)
