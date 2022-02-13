@@ -159,9 +159,9 @@ error_exit:
 }
 
 typedef enum {
-	COL_REFLECT = 0,
 	COL_AMBIENT = 1,
 	COL_COLOR   = 2,
+	COL_REFLECT = 3,
 	COL_RGBRAW  = 4,
 } COLOR_SENSOR_MODES;
 

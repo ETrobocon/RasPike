@@ -71,11 +71,15 @@ Std_ReturnType vdevSerialSend(const unsigned char *buf, int len)
 {
   Std_ReturnType err;
 
+  struct timespec ns = { 0, 1 * 500000 }; // 0.5msec
+  
   err = write(device_fd,buf,len);
   if ( err != len ) {
     printf("Write Error err=%d\n",errno);
     return -1;
   }
+  nanosleep(&ns,0);
+  
   return STD_E_OK;
 }
 
@@ -84,16 +88,31 @@ Std_ReturnType vdevSerialReceive(unsigned char *buf, int len)
 
   Std_ReturnType err;
 
-  do {
-    err = read(device_fd,buf,len);
-  } while ( err == 0 );
-   
-  if ( err != len ) {
-    printf("Read Error err=%d\n",errno);
-    return -1;
-  }
-  return STD_E_OK;
+  unsigned char *p = buf;
+  int left = len;
 
+  struct timespec ns = { 0, 1 * 1000000 }; // 1msec
   
+  while (1) {
+    while(1) {
+      err = read(device_fd,p,left);
+      if ( err != 0 ) {
+	break;
+      }
+      nanosleep(&ns,0);
+    } 
+    if ( err < 0 ) {
+      printf("read error errno=%d\n",errno);
+      return -1;
+    }
+
+    left = left - err;
+    p+=err;
+    if ( left == 0 ) {
+      break;
+    }
+
+  }
+  *p = 0;
   return STD_E_OK;
 }

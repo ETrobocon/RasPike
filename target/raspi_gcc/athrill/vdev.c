@@ -53,7 +53,6 @@ int initialize_vdev(void)
   printf("initialize vdev\n");
   memset(athrill_vdev_mem,0,sizeof(athrill_vdev_mem));
 
-
   /* Get Communication  Handler */
   /*
     UDP / SERIAL

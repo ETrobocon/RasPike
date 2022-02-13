@@ -67,15 +67,17 @@ static MpthrOperationType vdev_op = {
 	.do_proc = vdev_thread_do_proc,
 };
 
+static char previous_sent_buffer[VDEV_TX_DATA_SIZE];
+
 int vdevProtRaspikeInit(const VdevIfComMethod *com)
 {
   Std_ReturnType err;
 
   cur_com = com;
-  
-  memset(&send_command.com_header,0,sizeof(send_command.com_header));
-  memcpy(&send_command.com_header.header,"RSTX",4);
-  
+
+  // 0 を設定された時に動作するように-1を設定する
+  memset((char*)VDEV_TX_DATA_BASE,-1,VDEV_TX_DATA_BODY_SIZE);
+  memset(previous_sent_buffer,-1,VDEV_TX_DATA_BODY_SIZE);
   
   /* デバイスIOに書き込んだ際に呼ばれるコールバック関数 */
   SilSetWriteHook(vdevProtRaspikeSilCb);
@@ -146,7 +148,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     sigset_t old_set;
     disable_interrupt(&old_set);
     
-    static char previous_sent_buffer[VDEV_TX_DATA_SIZE];
+
 
     if ( previous_sent.tv_sec == 0 ) {
       save_sent_time();
@@ -265,7 +267,8 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	  }
 	  //	  printf("Not=%s",buf);
 	  sscanf(buf,"%d:%d",&cmd_id,&val);
-	  //	  printf("cmd=%d val=%d\n",cmd_id,val);
+	  //printf("cmd=%d val=%d\n",cmd_id,val);
+
 	  if ( cmd_id < 0 || cmd_id >= (VDEV_RX_DATA_SIZE-VDEV_RX_DATA_BODY_OFF )) {
 	    printf("cmd value error\n!");
 	    continue;

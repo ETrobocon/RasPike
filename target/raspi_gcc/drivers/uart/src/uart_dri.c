@@ -74,9 +74,9 @@ void uart_dri_get_data_touch(uint8_t index, uint8_t mode, void *dest, SIZE size)
 	return;
 }
 typedef enum {
-	DRI_COL_REFLECT = 0,
 	DRI_COL_AMBIENT = 1,
 	DRI_COL_COLOR   = 2,
+	DRI_COL_REFLECT = 3,
 	DRI_COL_RGBRAW  = 4,
 } DRI_COLOR_SENSOR_MODES;
 
