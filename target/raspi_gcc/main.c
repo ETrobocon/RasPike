@@ -2,6 +2,8 @@
 #include "devconfig.h"
 #include "target_kernel_impl.h"
 #include "main.h"
+#include <sys/time.h>
+#include <sys/resource.h>
 
 StartUpCb deviceStartupCb = 0;
 
@@ -35,6 +37,9 @@ main(int argc, const char *argv[])
 	}
 
 	sleep(1);
+
+	
+	setpriority(PRIO_PROCESS,0,-10);
 	
 	target_main();
 }

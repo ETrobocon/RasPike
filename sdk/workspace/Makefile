@@ -17,7 +17,7 @@ endif
 
 start: appdir
 	$(ADDITIONAL_PRE_APPL)
-	env LD_PRELOAD=../../../raspi_simple_setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
+	sudo env LD_PRELOAD=../../../raspi_simple_setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
 
 debug: appdir
 	$(ADDITIONAL_PRE_APPL)
