@@ -3,10 +3,6 @@ import time
 import re
 import hub
 import struct
-from spike import Motor
-from spike import DistanceSensor
-from spike import ColorSensor
-from spike import ForceSensor
 import uasyncio
 import gc
 
@@ -34,6 +30,11 @@ ultrasonic_sensor = getattr(hub.port,port_map["ultrasonic_sensor"]).device
 motor_rot_A = getattr(hub.port,port_map["motor_A"]).device
 motor_rot_B = getattr(hub.port,port_map["motor_B"]).device
 motor_rot_C = getattr(hub.port,port_map["motor_C"]).device
+
+# モーターの回転を逆にして指定したい場合、以下に-1を設定してください
+invert_A = 1
+invert_B = -1
+invert_C = 1
 
 color_sensor_mode = 0
 
@@ -125,11 +126,11 @@ async def receiver():
 
             # 高速化のために、motorスピードを優先して判定する
             if (cmd_id == 1):
-                motor_A.pwm(value)
+                motor_A.pwm(invert_A * value)
             elif (cmd_id == 2):
-                motor_B.pwm(value)
+                motor_B.pwm(invert_B * value)
             elif (cmd_id == 3):
-                motor_C.pwm(value)
+                motor_C.pwm(invert_C * value)
             #    count = count + 1
             #    now = time.ticks_us()
             #    sum_time = sum_time + (now - prev_time)
@@ -199,9 +200,9 @@ async def notifySensorValues():
             send_data(5,color_sensor.get()[1]/4)
             send_data(6,color_sensor.get()[2]/4)
 
-        send_data(64,motor_rot_A.get()[0])
-        send_data(65,motor_rot_B.get()[0])
-        send_data(66,motor_rot_C.get()[0])
+        send_data(64,motor_rot_A.get()[0]*invert_A)
+        send_data(65,motor_rot_B.get()[0]*invert_B)
+        send_data(66,motor_rot_C.get()[0]*invert_C)
 
         time_diff = next_time - time.ticks_us()
 #        print("timediff={}".format(time_diff))
