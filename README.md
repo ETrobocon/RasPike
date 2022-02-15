@@ -1,20 +1,32 @@
-Raspi用EV3 シミュレータ
-
-初めに
+# Raspi用 SPIKE制御開発環境「RasPike（ラスパイク）」
 
 
-このraspi用aspシミュレータはMac OS X用のシミュレータをraspi用に修正したものです。
+
+## はじめに
+
+この環境はETロボコン用にraspberryPiとLEGO(R)のSPIKE Prime(R)を接続して動作させるためのものです。raspberry側のEV3RT互換環境と、SPIKE側の制御ソフトからなり、これらを総称して「RasPike」と呼びます。
+
+EV3RTのベースとなるraspberry-Pi用aspシミュレータはMac OS X用のシミュレータをraspi用に修正したものとなっています。
 https://www.toppers.jp/asp3-e-download.html
 
-athrillのバージョンに合わせるため、3.2.0を使用しています。ETロボコンのため、SPIKEとシリアルで繋げて、直接動作させるために使用する予定です。
+athrillのバージョンに合わせるため、3.2.0を使用しています。
 
 また、linux用の変更やsetjmp/longjmpのmangleに関しては
 https://qiita.com/morioka/items/a186fff4db1eabb7e7de
 を参考にしています。
-2022/1/14リリースバージョンでは、ETロボコンシミュレータと接続して動作するようになっています。
+
 本SWはmaosxシミュレータの成果物および、athrillの成果物を多く使用しています。
 
-1. OSのインストール
+## Raspberry側の環境構築
+
+### 0. HWの準備
+
+Raspberry-PiとSPIKEの接続にはアフレルから販売されているSPIKE ETロボコンキットのSPIKE用ケーブルを使用します。
+https://afrel.co.jp/product/et-set
+
+接続の方法などはETロボコンの組み立て図を参照ください。SPIKEケーブルはSPIKEのDポートを利用します。また、Raspberry側でGPIOを使うための設定が必要になります。
+
+### 1. OSのインストール
 
 対応しているRasPiのOSはRasBerry Pi OS(Bullseye)の32bit版になります。
 https://www.raspberrypi.com/software/operating-systems/#raspberry-pi-os-32-bit
@@ -28,11 +40,12 @@ sudo gem install shell
 
 でインストールをしておいてください。
 
-2. setjmp/longjmp特殊版のmake
+### 2. setjmp/longjmp特殊版のmake
 
 mac os x用のシミュレータはsetjmp/longjmpの仕組みを使ってコンテキストスイッチを行なっていますが、通常のsetjmp/longjmpで設定されるPC/SPはmangleされており、オリジナルのシミュレータのようにjmp_bufにポインタを簡単に設定することはできません。そのため、mangleを行わないsetjmp/longjmpを組み合わせることで実行できるようにしています。
 
-mangleしないバージョンのsetjmp/longjmpは
+mangleしないバージョンのsetjmp/longjmpは以下にあります。
+
 https://github.com/ytoi/raspi_simple_setjmp.git
 
 ```
@@ -45,20 +58,69 @@ make
 でlibssetjmp.soができます。
 これをLD_PRELOAD環境変数を使うことで、libcよりも早く読み込ませて置き換えをおこないます。
 
-3. ev3rt simのコンパイル 
+### 3. ev3rt simのコンパイル 
 
 
 ```
 (workに移動)
 git clone https://github.com/ytoi/ev3rt_aspsim_raspi_linux.git ev3rtsim
 cd ev3rtsim/sdk/workspace
-make img=(
+make img=(アプリ名)
 ```
 
-4. 実行の仕方
+## SPIKE側の環境構築
 
+### 1. SPIKEプログラムのインストール
+
+SPIKEのプログラムはspikeディレクトリ以下にあります。
+raspike_etrobo.py - ETロボコン用に最適化した制御プログラムです。
+raspike_main.py - 汎用的なSPIKE制御用プログラムです
+
+ETロボコン用にはraspike_etrobo.pyを利用してください。
+
+SPIKEへの転送には以下の２つの方法があります。
+
+(1) PCから直接SPIKEに入れる
+
+Visual Studio CodeのSPIKE用拡張を使うのがおすすめです。
+
+https://marketplace.visualstudio.com/items?itemName=PeterStaev.lego-spikeprime-mindstorms-vscode
+
+raspike_etrobo.pyの先頭行に
+
+``# LEGO type:standard slot:2 autostart``
+
+とあるのは、この拡張機能のリロードボタンを押した時にSlot２に自動的にアップされ、実行されるための記述です。slot番号は2としていますが、自由に変えてください。
+
+(2) Raspberry-PiからMu-Editorを使って入れる
+
+アフレルさんの教材にあるのがこの方式ですが、作者はやったことがないので後で試したら記載します。
+
+(3) PCから教材用SPIKEアプリを使って入れる
+
+これはお勧めしません。SPIKEアプリはかなりパフォーマンスが悪いので、簡単な動作確認には良いですが、ETロボコンでは使わない方が良いでしょう。
+（ただし、プログラムを入れるだけなら大丈夫かもしれません）
+
+一度インストールしたら、そのあとはSPIKE側のUIからプログラムを選択して実行すれば良いです。再度のインストールは不要です。
+
+
+## 実行方法
+
+注意として、SPIKEの電源を入れたまま何度もSPIKEのプログラムを実行しているとSPIKE側のpythonがどんどん重くなり、性能が悪くなることです。走行させるたびにSPIKEの電源を切るようにしてください。性能が10倍くらい違います。
+
+(1) SPIKEのプログラムを先に実行させます
+
+(2) Raspberry-Piのシェルからプログラムを実行します
+
+`` make start``
+
+
+
+## ETロボコンシミュレータ実行の仕方
+
+Raspberry-Pi上のプログラムでETロボコンシミュレータを動作させることができます。
 ETロボコンシミュレータと繋ぐには、raspi側の設定と、ETロボコン側の設定が必要です。
-raspi側はsdk/common/device_config.txtに相手側のIPアドレスを書く必要があります(TX)。
+raspi側はsdk/common/device_config_athrill.txtに相手側のIPアドレスを書く必要があります(TX)。
 
 sdk/common/device_config.txtの以下を環境に合わせて変更してください
 
@@ -72,8 +134,9 @@ DEBUG_FUNC_VDEV_RX_IPADDR	192.168.11.12  --> RaspiのIPアドレス
 
 
 ```
-env LD_PRELOAD=../../raspi_simple_setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
+make startsim
 ```
+
 で実行できます。
 
 gdbを使う場合は
@@ -102,7 +165,6 @@ workspaceがある実際の場所に変更してください。
 
 
 注意点
-
 
 2022/1/14現在、app.cに__dso_handle=0の定義があると、多重定義になってしまうので、アプリでは定義せず、コメントアウトしてください。
 Bluetooth/EV3のファイルシステム関数は未サポートとなっています。
