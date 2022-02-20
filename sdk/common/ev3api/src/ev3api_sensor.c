@@ -230,7 +230,7 @@ void ev3_color_sensor_get_rgb_raw(sensor_port_t port, rgb_raw_t *val) {
 	CHECK_COND(ev3_sensor_get_type(port) == COLOR_SENSOR, E_OBJ);
 
 	/* RaSpike */
-	set_sensor_mode(port,COL_REFLECT);
+	set_sensor_mode(port,COL_RGBRAW);
 
 	uart_sensor_fetch_data(port, COL_RGBRAW, val, sizeof(rgb_raw_t));
 
@@ -303,8 +303,8 @@ error_exit:
 }
 
 typedef enum {
-	US_DIST_CM = 0,
-	US_DIST_IN = 1,
+	US_DIST_CM = 1,
+	//	US_DIST_IN = 1,
 	US_LISTEN  = 2,
 } ULTRASONIC_SENSOR_MODES;
 
@@ -324,7 +324,9 @@ int16_t ev3_ultrasonic_sensor_get_distance(sensor_port_t port) {
 	set_sensor_mode(port,US_DIST_CM);
 
 	uart_sensor_fetch_data(port, US_DIST_CM, &val, sizeof(val));
-    return val / 10;
+
+	/* RasPile Use original value */
+	return val;
 
 error_exit:
     syslog(LOG_WARNING, "%s(): ercd %d", __FUNCTION__, ercd);
