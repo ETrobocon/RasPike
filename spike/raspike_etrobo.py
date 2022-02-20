@@ -32,6 +32,7 @@ while True:
     motor_rot_A = getattr(hub.port, port_map["motor_A"]).device
     motor_rot_B = getattr(hub.port, port_map["motor_B"]).device
     motor_rot_C = getattr(hub.port, port_map["motor_C"]).device
+    touch_sensor = hub.button.left
 
     if (
         motor_A is None
@@ -211,6 +212,7 @@ async def send_data(cmd, val):
 async def notifySensorValues():
     print("Start Sensors")
     global ser
+    touch_sensor_value = -1
     while True:
         # 次の更新タイミング  ここでは10msec
         next_time = time.ticks_us() + 10 * 1000
@@ -244,6 +246,16 @@ async def notifySensorValues():
         await send_data(64, motor_rot_A.get()[0] * invert_A)
         await send_data(65, motor_rot_B.get()[0] * invert_B)
         await send_data(66, motor_rot_C.get()[0] * invert_C)
+
+        #タッチセンサー
+        val = touch_sensor.is_pressed()
+        if touch_sensor_value != val :
+            touch_sensor_value = val
+            sendVal = 0
+            if touch_sensor_value:
+                # Touchセンサーは加圧のアナログ値で、2048以上をタッチとして扱うため2048とする
+                sendVal = 2048
+            await send_data(28,sendVal)
 
         time_diff = next_time - time.ticks_us()
         #        print("timediff={}".format(time_diff))
