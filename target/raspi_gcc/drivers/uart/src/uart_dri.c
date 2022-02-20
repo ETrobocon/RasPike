@@ -8,7 +8,7 @@ void uart_dri_get_data_ultrasonic(uint8_t mode, void *dest, SIZE size)
 	uint32_t data;
 	const uint32_t *addr;
 	switch (mode) {
-	case 0:
+	case 1:
 		addr = (const uint32_t *)EV3_SENSOR_ADDR_ULTRASONIC;
 		break;
 	case 2:
@@ -20,7 +20,7 @@ void uart_dri_get_data_ultrasonic(uint8_t mode, void *dest, SIZE size)
 	data = sil_rew_mem(addr);
 
 	switch (mode) {
-	case 0:
+	case 1:
 		// get_distance uses int16_t
 		*(int16_t*)dest = (int16_t)data;
 		break;

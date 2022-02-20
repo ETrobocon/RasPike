@@ -130,6 +130,23 @@ static void enable_interrupt(sigset_t *to_set)
   sigprocmask(SIG_SETMASK,to_set,NULL);
 }
 
+char *makeCommand(int cmd_id, int value, char *buf)
+{
+  int k = 0;
+  /* Message Byte. First Bit is On */
+  buf[k] = (0x80|(cmd_id&0x7f));
+  /* following bytes do not use First Bit */
+  /* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
+  k++;
+  buf[k] = (((value)>>7) & 0x1f);
+  if ( value < 0 ) {
+    buf[k] |= 0x20; /* Minus Bit */
+  }
+  k++;
+  buf[k] = (0x7f & value);
+	
+  return buf;
+}
 
 /* コンフィグ系のものを先に送るため、送信順を制御する*/
 static int send_order[VDEV_TX_DATA_SIZE/4] =
@@ -163,6 +180,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     unsigned int *prevMem = (unsigned int *)previous_sent_buffer;
     char buf[3*256];
     int k = 0;
+    struct timespec wait = {0,0.5*1000000}; // 0.5msec wait
     for ( i = 0; i < numof(send_order); i++ ) {
       int send_idx = send_order[i];
       curMem = (unsigned int *)(VDEV_TX_DATA_BASE) + send_idx;
@@ -172,18 +190,19 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 	int value = abs(*(int*)curMem);
 	
 	/* Message Byte. First Bit is On */
-	buf[k] = (0x80|(send_idx&0x7f));
+	buf[0] = (0x80|(send_idx&0x7f));
 	/* following bytes do not use First Bit */
 	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
 	k++;
-	buf[k] = (((value)>>7) & 0x1f);
+	buf[1] = (((value)>>7) & 0x1f);
 	if ( *(int*)curMem < 0 ) {
 	  buf[k] |= 0x20; /* Minus Bit */
 	}
 	k++;
-	buf[k] = (0x7f & value);
+	buf[2] = (0x7f & value);
 	
-	//	len = cur_com->send(buf,sizeof(buf));
+	len = cur_com->send(buf,3);
+	nanosleep(&wait,0);
 	*prevMem = *curMem;
 	k++;
       }
@@ -192,8 +211,12 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 
     }
     if ( k != 0 ) {
-      len = cur_com->send(buf,k);
+      //      len = cur_com->send(buf,k);
+    } else {
+      len = cur_com->send(makeCommand(127,0,buf),3);
     }
+      // SPIKE側を起動させるために、10msecおきにコマンドは送る
+      
       
     enable_interrupt(&old_set);      
 	
@@ -255,19 +278,26 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	  /* Find header @ */
 	  while (1) {
 	    err = cur_com->receive(buf,1);
+
 	    if ( buf[0] == '@' ) {
 	      break;
+	    } else {
+	      printf("@=%x\n",buf[0]);
 	    }
 	  }
+	  memset(buf,0,RASPIKE_RX_SIZE);
 	  err = cur_com->receive(buf,RASPIKE_RX_SIZE);	  
 
 	  
 	  if (err != STD_E_OK) {
+	    printf("Error!");
+	    
 	    continue;
 	  }
-	  //	  printf("Not=%s",buf);
+
+	  //	   printf("Not=%s\n",buf);
 	  sscanf(buf,"%d:%d",&cmd_id,&val);
-	  //printf("cmd=%d val=%d\n",cmd_id,val);
+	  //	  printf("cmd=%d val=%d\n",cmd_id,val);
 
 	  if ( cmd_id < 0 || cmd_id >= (VDEV_RX_DATA_SIZE-VDEV_RX_DATA_BODY_OFF )) {
 	    printf("cmd value error\n!");
