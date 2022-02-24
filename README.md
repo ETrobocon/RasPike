@@ -70,6 +70,31 @@ make img=(アプリ名)
 
 ## SPIKE側の環境構築
 
+### 0. SPIKEのつなぎ方
+
+以下で接続してください。
+```
+アームモータ : A
+右モータ : B
+左モータ : E
+カラーセンサー  : C
+超音波センサー : F
+serial通信:D
+```
+
+上記接続に対し、EV3RTからは以下のようにマップされます。アプリ側はこれに合わせてコードを書いてください。
+
+```
+EV3RTでの見え方
+ポートA:アームモータ
+ポートB:右モータ
+ポートC:左モータ
+ポート1:タッチセンサ（実際はSPIKEの左ボタンが対応します)
+ポート2:カラーセンサー
+ポート3:超音波センサー
+ポート4:ジャイロセンサ（これはまだ開発中)
+```
+
 ### 1. SPIKEプログラムのインストール
 
 SPIKEのプログラムはspikeディレクトリ以下にあります。
@@ -82,7 +107,7 @@ SPIKEへの転送には以下の２つの方法があります。
 
 (1) PCから直接SPIKEに入れる
 
-Visual Studio CodeのSPIKE用拡張を使うのがおすすめです。
+(1-1) Visual Studio CodeのSPIKE用拡張を使うやり方
 
 https://marketplace.visualstudio.com/items?itemName=PeterStaev.lego-spikeprime-mindstorms-vscode
 
@@ -91,6 +116,11 @@ raspike_etrobo.pyの先頭行に
 ``# LEGO type:standard slot:2 autostart``
 
 とあるのは、この拡張機能のリロードボタンを押した時にSlot２に自動的にアップされ、実行されるための記述です。slot番号は2としていますが、自由に変えてください。
+
+(1-2) PCのMu-Editorを使っていれる入れ方
+　PCにMu-Editorを入れます。この場合、SPIKEに指しているUSBをPC側に挿してください。
+ ファイル転送を選択して、raspike_etrobo.pyを右クリックして、「write as main.py」でSPIKEのmain.pyとして書き込みます。こうすることで、SPIKEは立ち上げるとRasPike用にRasPiからの信号待ちになります（一応ディスプレイに「ET」と表示しているので、きちんと動いているかはわかります）
+ このやり方が一番パフォーマンス良いかと思います。RasPiのプログラムを動かす前にはSPIKEの再起動もするようにしましょう（メモリが使われて、GCが働くとパフォーマンスが悪くなるため）。
 
 (2) Raspberry-PiからMu-Editorを使って入れる
 
