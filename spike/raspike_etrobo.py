@@ -46,8 +46,8 @@ while True:
 
 # モーターの回転を逆にして指定したい場合、以下に-1を設定してください
 invert_A = 1
-invert_B = -1
-invert_C = 1
+invert_B = 1
+invert_C = -1
 
 color_sensor_mode = 0
 ultrasonic_sensor_mode = 0
