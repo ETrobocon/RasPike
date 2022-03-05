@@ -76,8 +76,8 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
   cur_com = com;
 
   // 0 を設定された時に動作するように-1を設定する
-  memset((char*)VDEV_TX_DATA_BASE,-1,VDEV_TX_DATA_BODY_SIZE);
-  memset(previous_sent_buffer,-1,VDEV_TX_DATA_BODY_SIZE);
+  memset((char*)VDEV_TX_DATA_BASE,0,VDEV_TX_DATA_BODY_SIZE);
+  memset(previous_sent_buffer,0,VDEV_TX_DATA_BODY_SIZE);
   
   /* デバイスIOに書き込んだ際に呼ばれるコールバック関数 */
   SilSetWriteHook(vdevProtRaspikeSilCb);
