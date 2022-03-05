@@ -2,6 +2,7 @@
 import time
 import hub
 import uasyncio
+from uasyncio import Event
 import gc
 from hub import Image, display
 
@@ -274,7 +275,7 @@ async def main_task():
     gc.collect()
     uasyncio.create_task(notifySensorValues())
     uasyncio.create_task(receiver())
-    await uasyncio.sleep(120)
+    await uasyncio.sleep(10*60)
     global num_command, num_fail, count, sum_time, count
     stop_all()
     while True:
