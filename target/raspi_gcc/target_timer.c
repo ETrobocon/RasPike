@@ -58,7 +58,7 @@
 #endif /* TOPPERS_SUPPORT_OVRHDR */
 #include "target_timer.h"
 #include <sys/time.h>
-
+#include <time.h>
 /*
  *  高分解能タイマの状態
  */
@@ -202,16 +202,35 @@ target_timer_terminate(intptr_t exinf)
 	setitimer(ITIMER_REAL, &itimerval_stop, NULL);
 }
 
+#define get_usec_from_timespec(ts) ((ts)->tv_sec * 1000000 + (ts)->tv_nsec/1000)
+
 /*
  *  高分解能タイマの現在のカウント値の読出し
  */
 HRTCNT
 target_hrt_get_current(void)
 {
-	struct itimerval	val;
+  static unsigned int start_time = 0;
 
-	getitimer(ITIMER_REAL, &val);
-	return(hrtcnt_current + itimer_progress(&val));
+  /* #10 
+     clock_gettime()の値をそのまま返すことにする 
+  */
+  struct timespec tm;
+  if ( start_time == 0 ) {
+    clock_gettime(CLOCK_MONOTONIC,&tm);
+    start_time = get_usec_from_timespec(&tm);
+  }
+  clock_gettime(CLOCK_MONOTONIC,&tm);
+  return (get_usec_from_timespec(&tm)-start_time);
+
+  /* Original */
+#if 0
+  struct itimerval	val;
+
+  getitimer(ITIMER_REAL, &val);
+  return(hrtcnt_current + itimer_progress(&val));
+#endif	
+
 }
 
 /*
