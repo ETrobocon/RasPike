@@ -2,11 +2,46 @@
 #include "ev3_vdev.h"
 #include "sil.h"
 #include <string.h>
+#include <time.h>
 
-void uart_dri_get_data_ultrasonic(uint8_t mode, void *dest, SIZE size)
+#define RASPIKE_NOT_USED (999999)
+
+/* モードチェンジを行った際に、実際に値が取れるまで待つ。必要に応じて再送を行う*/
+static void uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_addr)
+{
+
+  uint8_t current_mode = sil_rew_mem((uint32_t *)EV3_SENSOR_MODE_INX(port));
+  if ( current_mode != mode ) {
+    /* モードが切り替わった*/
+    
+    /* まずvalueを通信上使われない999999に変更する */
+    sil_wrw_mem(check_addr,RASPIKE_NOT_USED);
+
+    /* モードチェンジのコマンドを送出する*/
+    sil_wrw_mem((uint32_t *)EV3_SENSOR_MODE_INX(port),mode);
+
+    /* RASPIKE_NOT_USED 以外の値が設定されることを待つ */
+    struct timespec before,now;
+    clock_gettime(CLOCK_MONOTONIC,&before);
+    do {
+      volatile uint32_t *addr = check_addr;
+      uint32_t data = sil_rew_mem(addr);
+      if ( data != RASPIKE_NOT_USED ) {
+	break;
+      }
+      clock_gettime(CLOCK_MONOTONIC,&now);
+      /* TODO:再送処理 */
+    
+    } while(1);
+  }
+}
+  
+
+void uart_dri_get_data_ultrasonic(uint8_t port,uint8_t mode, void *dest, SIZE size)
 {
 	uint32_t data;
 	const uint32_t *addr;
+	  
 	switch (mode) {
 	case 1:
 		addr = (const uint32_t *)EV3_SENSOR_ADDR_ULTRASONIC;
@@ -17,6 +52,10 @@ void uart_dri_get_data_ultrasonic(uint8_t mode, void *dest, SIZE size)
 	default:
 		return;
 	}
+
+	/* モードの切り替え待ち（必要な場合) */
+	uart_wait_mode_change(port,mode,addr);
+
 	data = sil_rew_mem(addr);
 
 	switch (mode) {
@@ -31,10 +70,12 @@ void uart_dri_get_data_ultrasonic(uint8_t mode, void *dest, SIZE size)
 	//memcpy(dest, (void*)&data, sizeof(data));
 	return;
 }
-void uart_dri_get_data_gyro(uint8_t mode, void *dest, SIZE size)
+void uart_dri_get_data_gyro(uint8 port,uint8_t mode, void *dest, SIZE size)
 {
 	uint16_t data;
 	const uint32_t *addr;
+
+	
 	switch (mode) {
 	case 0:
 		addr = (const uint32_t *)EV3_SENSOR_ADDR_ANGLE;
@@ -54,11 +95,14 @@ void uart_dri_get_data_gyro(uint8_t mode, void *dest, SIZE size)
 	default:
 		return;
 	}
+	/* モードの切り替え待ち（必要な場合) */
+	uart_wait_mode_change(port,mode,addr);
+
 	data = sil_rew_mem(addr);
 	memcpy(dest, (void*)&data, sizeof(data));
 	return;
 }
-void uart_dri_get_data_touch(uint8_t index, uint8_t mode, void *dest, SIZE size)
+void uart_dri_get_data_touch(uint8_t port,uint8_t index, uint8_t mode, void *dest, SIZE size)
 {
 	uint16_t data ;
 	uint32_t *addr;
@@ -69,6 +113,10 @@ void uart_dri_get_data_touch(uint8_t index, uint8_t mode, void *dest, SIZE size)
 	else {
 		addr = (uint32_t *)EV3_SENSOR_ADDR_TOUCH_1;
 	}
+	/* モードの切り替え待ち（必要な場合) */
+	/* タッチセンサーは不要とする */
+	/* uart_wait_mode_change(port,mode,addr); */
+	
 	data = (uint16_t)sil_rew_mem(addr);
 	memcpy(dest, (void*)&data, sizeof(data));
 	return;
@@ -80,22 +128,31 @@ typedef enum {
 	DRI_COL_RGBRAW  = 4,
 } DRI_COLOR_SENSOR_MODES;
 
-void uart_dri_get_data_color(uint8_t index, uint8_t mode, void *dest, SIZE size)
+void uart_dri_get_data_color(uint8_t port,uint8_t index, uint8_t mode, void *dest, SIZE size)
 {
 	uint8_t *data8 = (uint8_t*)dest;
 	uint16_t *array = (uint16_t*)dest;
 	DRI_COLOR_SENSOR_MODES dri_mode = mode;
 	if (dri_mode == DRI_COL_REFLECT) {
-		*data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_REFLECT(index));
+	  /* モードの切り替え待ち（必要な場合) */
+	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_REFLECT(index));
+	
+	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_REFLECT(index));
 	}
 	else if (dri_mode == DRI_COL_AMBIENT) {
-		*data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_AMBIENT(index));
+	  /* モードの切り替え待ち（必要な場合) */
+	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_AMBIENT(index));
+	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_AMBIENT(index));
 	} else if ( dri_mode == DRI_COL_COLOR ) {
-		*data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_COLOR(index));
+	  /* モードの切り替え待ち（必要な場合) */
+	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_COLOR(index));	  
+	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_COLOR(index));
 	} else {
-		array[0] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_R(index));
-		array[1] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_G(index));
-		array[2] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_B(index));
+	  /* Rを代表として待ちを行う*/
+	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_RGB_R(index));	  
+	  array[0] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_R(index));
+	  array[1] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_G(index));
+	  array[2] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_B(index));
 	}
 	return;
 }

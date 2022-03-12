@@ -50,24 +50,24 @@ void uart_sensor_fetch_data(sensor_port_t port, uint8_t mode, void *dest, SIZE s
 	sensor_type_t type = ev3_sensor_get_type(port);
 	switch (type) {
 		case ULTRASONIC_SENSOR:
-			uart_dri_get_data_ultrasonic(mode, dest, size);
+		  uart_dri_get_data_ultrasonic(port, mode, dest, size);
 			break;
 		case GYRO_SENSOR:
-			uart_dri_get_data_gyro(mode, dest, size);
+		  uart_dri_get_data_gyro(port,mode, dest, size);
 			break;
 		case TOUCH_SENSOR:
 			{
-				uint8_t index = get_sensor_index(port, type);
-				if (index != -1) {
-					uart_dri_get_data_touch(index, mode, dest, size);
-				}
+			  uint8_t index = get_sensor_index(port, type);
+			  if (index != -1) {
+			    uart_dri_get_data_touch(port, index, mode, dest, size);
+			  }
 			}
 			break;
 		case COLOR_SENSOR:
 			{
 				uint8_t index = get_sensor_index(port, type);
 				if (index != -1) {
-					uart_dri_get_data_color(index, mode, dest, size);
+				  uart_dri_get_data_color(port,index, mode, dest, size);
 				}
 			}
 			break;
@@ -108,7 +108,7 @@ static uint8_t get_sensor_index(sensor_port_t port, sensor_type_t type)
 static void set_sensor_mode(sensor_port_t port, uint8_t mode)
 {
   if (sensor_modes[port] != mode) {
-    uart_dri_set_sensor_mode(port,mode);
+    //    uart_dri_set_sensor_mode(port,mode);
     sensor_modes[port] = mode;
   }
 }
@@ -340,6 +340,9 @@ bool_t ev3_ultrasonic_sensor_listen(sensor_port_t port) {
 	CHECK_PORT(port);
 	CHECK_COND(ev3_sensor_get_type(port) == ULTRASONIC_SENSOR, E_OBJ);
 
+	/* RaSpike */
+	set_sensor_mode(port,US_LISTEN);
+	
 	// TODO: TEST THIS API!
 	bool_t val;
 	uart_sensor_fetch_data(port, US_LISTEN, &val, sizeof(val));
