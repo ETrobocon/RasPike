@@ -114,7 +114,7 @@ async def receiver():
                 if data1 & 0x80:
                     cmd = data1
                     num_fail = num_fail + 1
-                    #                    print ("data1 broken")
+                    print ("data1 broken")
                     continue
                 idx = cmd & 0x7F
 
@@ -122,7 +122,7 @@ async def receiver():
                 if data2 & 0x80:
                     cmd = data2
                     num_fail = num_fail + 1
-                    #                    print ("data2 broken")
+                    print ("data2 broken")
                     continue
 
                 cmd_id = idx
@@ -174,6 +174,8 @@ async def receiver():
             elif cmd_id == 61:
                 # Port2 Color Sensor
                 # Color Sensor Mode
+                # 切り替えの間カラーセンサーの取得がされると不安定になるため、modeは一時的に0にする
+                color_sensor_mode = 0
                 if value == 1:
                     # Ambient
                     color_sensor.mode(2)
@@ -185,8 +187,10 @@ async def receiver():
                     color_sensor.mode(1)
                 elif value == 4:
                     # RGB
-                    print("Set RGB")
+                    #print("Set RGB")
                     color_sensor.mode(5)
+                #ダミーリード
+                cv = color_sensor.get()
                 color_sensor_mode = value
             elif cmd_id == 62:
                 # Port3 Ultra Sonic Sensor
@@ -207,8 +211,7 @@ async def send_data(cmd, val):
 #    print(sendData)
     ser.write(sendData)
     #高速で送るとパケットが落ちるため、0.5msec休ませる
-    await uasyncio.sleep(0.0005)
-
+    await uasyncio.sleep(0.0005)    
 
 async def notifySensorValues():
     print("Start Sensors")
@@ -217,21 +220,34 @@ async def notifySensorValues():
     while True:
         # 次の更新タイミング  ここでは10msec
         next_time = time.ticks_us() + 10 * 1000
+
+        # カラーセンサーの切り替えがあった場合、タイミングによってはget()がNoneになったり、
+        # RGBではない値が取れたりするので、その場合は次の周期で通知する
         if color_sensor_mode == 1:
+            color_val = color_sensor.get()
+            if color_val is not None:
             # ambient
-            await send_data(1, color_sensor.get()[0])
+                await send_data(1, color_val[0])
         elif color_sensor_mode == 2:
-            # color
-            # TODO:Convert to EV3 Value
-            await send_data(2, color_sensor.get()[0])
+            color_val = color_sensor.get()
+            if color_val is not None:
+                # color
+                # TODO:Convert to EV3 Value
+                await send_data(2, color_val[0])
         elif color_sensor_mode == 3:
+            color_val = color_sensor.get()
+            if color_val is not None:
             # Reflect
-            await send_data(3, color_sensor.get()[0])
+                await send_data(3, color_val[0])
         elif color_sensor_mode == 4:
-            rgb = color_sensor.get()
-            await send_data(4, rgb[0] / 4)
-            await send_data(5, rgb[1] / 4)
-            await send_data(6, rgb[2] / 4)
+            color_val = color_sensor.get()
+            if color_val[0] is not None and len(color_val) == 4 and color_val[2] is not None:
+                r = color_val[0]
+                g = color_val[1]
+                b = color_val[2]
+                await send_data(4, r / 4)
+                await send_data(5, g / 4)
+                await send_data(6, b / 4)
 
         # 超音波センサー
         if ultrasonic_sensor_mode == 1:
