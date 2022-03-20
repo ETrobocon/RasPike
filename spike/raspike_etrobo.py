@@ -35,7 +35,7 @@ while True:
     motor_rot_A = getattr(hub.port, port_map["motor_A"]).device
     motor_rot_B = getattr(hub.port, port_map["motor_B"]).device
     motor_rot_C = getattr(hub.port, port_map["motor_C"]).device
-    touch_sensor = hub.button.left
+    touch_sensor = hub.button.connect
 
     if (
         motor_A is None
