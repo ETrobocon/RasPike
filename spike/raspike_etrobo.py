@@ -24,6 +24,8 @@ port_map = {
 
 # Device objects
 
+hub.display.show(hub.Image.ALL_CLOCKS,delay=400,clear=True,wait=False,loop=True,fade=0)
+
 while True:
     motor_A = getattr(hub.port, port_map["motor_A"]).motor
     motor_B = getattr(hub.port, port_map["motor_B"]).motor
