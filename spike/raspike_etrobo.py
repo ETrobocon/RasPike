@@ -213,12 +213,16 @@ async def send_data(cmd, val):
 #    print(sendData)
     ser.write(sendData)
     #高速で送るとパケットが落ちるため、0.5msec休ませる
-    await uasyncio.sleep(0.0005)    
+    await uasyncio.sleep(0.0005)
 
 async def notifySensorValues():
     print("Start Sensors")
     global ser
     touch_sensor_value = -1
+    long_period = 0
+    long_period_count = 0
+    #500msec周期
+    long_period_time_us = 500000
     while True:
         # 次の更新タイミング  ここでは10msec
         next_time = time.ticks_us() + 10 * 1000
@@ -275,6 +279,17 @@ async def notifySensorValues():
                 # Touchセンサーは加圧のアナログ値で、2048以上をタッチとして扱うため2048とする
                 sendVal = 2048
             await send_data(28,sendVal)
+
+        #1sec周期で取る項目
+        cur = time.ticks_us()
+        if long_period < cur:
+            #電流/電圧は1sec毎に送るが、位相はずらす
+            if ( long_period_count % 2 ) == 0:
+                await send_data(29,hub.battery.current())
+            else:
+                await send_data(30,hub.battery.voltage())
+            long_period = cur + long_period_time_us
+            long_period_count = long_period_count + 1
 
         time_diff = next_time - time.ticks_us()
         #        print("timediff={}".format(time_diff))
