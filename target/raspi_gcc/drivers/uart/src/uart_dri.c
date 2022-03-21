@@ -19,19 +19,18 @@ static void uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_add
 
     /* モードチェンジのコマンドを送出する*/
     sil_wrw_mem((uint32_t *)EV3_SENSOR_MODE_INX(port),mode);
-
-    /* RASPIKE_NOT_USED 以外の値が設定されることを待つ */
-    struct timespec before,now;
-    clock_gettime(CLOCK_MONOTONIC,&before);
+    volatile uint32_t *addr = check_addr;
+    
+    /* Ackは受け取ったが、実際に値としてRASPIKE_NOT_USED 以外の値が設定されることを待つ */
+    struct timespec t = {0,10*1000000};
+    
     do {
-      volatile uint32_t *addr = check_addr;
       uint32_t data = sil_rew_mem(addr);
+      //printf("port=%d val=%d\n",port,data);
       if ( data != RASPIKE_NOT_USED ) {
 	break;
       }
-      clock_gettime(CLOCK_MONOTONIC,&now);
-      /* TODO:再送処理 */
-    
+      nanosleep(&t,0);
     } while(1);
   }
 }
@@ -95,8 +94,6 @@ void uart_dri_get_data_gyro(uint8 port,uint8_t mode, void *dest, SIZE size)
 	default:
 		return;
 	}
-	/* モードの切り替え待ち（必要な場合) */
-	uart_wait_mode_change(port,mode,addr);
 
 	data = sil_rew_mem(addr);
 	memcpy(dest, (void*)&data, sizeof(data));
@@ -134,21 +131,17 @@ void uart_dri_get_data_color(uint8_t port,uint8_t index, uint8_t mode, void *des
 	uint16_t *array = (uint16_t*)dest;
 	DRI_COLOR_SENSOR_MODES dri_mode = mode;
 	if (dri_mode == DRI_COL_REFLECT) {
-	  /* モードの切り替え待ち（必要な場合) */
 	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_REFLECT(index));
 	
 	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_REFLECT(index));
 	}
 	else if (dri_mode == DRI_COL_AMBIENT) {
-	  /* モードの切り替え待ち（必要な場合) */
 	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_AMBIENT(index));
 	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_AMBIENT(index));
 	} else if ( dri_mode == DRI_COL_COLOR ) {
-	  /* モードの切り替え待ち（必要な場合) */
 	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_COLOR(index));	  
 	  *data8 = (uint8_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_COLOR(index));
 	} else {
-	  /* Rを代表として待ちを行う*/
 	  uart_wait_mode_change(port,mode,(uint32_t*)EV3_SENSOR_ADDR_RGB_R(index));	  
 	  array[0] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_R(index));
 	  array[1] = (uint16_t)sil_rew_mem( (const uint32_t *)EV3_SENSOR_ADDR_RGB_G(index));

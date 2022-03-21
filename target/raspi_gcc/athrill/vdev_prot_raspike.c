@@ -10,6 +10,7 @@
 #include "devconfig.h"
 #include "vdev_private.h"
 #include "target_kernel_impl.h"
+#include <pthread.h>
 
 static uint32 reset_area_off = 0;
 static uint32 reset_area_size  = 0; 
@@ -67,6 +68,10 @@ static MpthrOperationType vdev_op = {
 	.do_proc = vdev_thread_do_proc,
 };
 
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
 static char previous_sent_buffer[VDEV_TX_DATA_SIZE];
 
 int vdevProtRaspikeInit(const VdevIfComMethod *com)
@@ -113,6 +118,13 @@ static uint32 get_time_from_previous_sending(void)
 	return (uint32)((uint64)(cur.tv_sec-previous_sent.tv_sec)*1000000000 + (uint64)cur.tv_nsec-(uint64)previous_sent.tv_nsec)/1000000;
 }
 
+static uint32 get_msec_from_previous_time(const struct timespec *now,const struct timespec *before)
+{
+	return (uint32)((uint64)(now->tv_sec-before->tv_sec)*1000000000 + (uint64)now->tv_nsec-(uint64)before->tv_nsec)/1000000;
+}
+
+
+
 static void disable_interrupt(sigset_t *old)
 {
   sigset_t sigset;
@@ -129,6 +141,7 @@ static void enable_interrupt(sigset_t *to_set)
 {
   sigprocmask(SIG_SETMASK,to_set,NULL);
 }
+
 
 char *makeCommand(int cmd_id, int value, char *buf)
 {
@@ -149,8 +162,44 @@ char *makeCommand(int cmd_id, int value, char *buf)
 }
 
 /* コンフィグ系のものを先に送るため、送信順を制御する*/
-static int send_order[VDEV_TX_DATA_SIZE/4] =
-  {56,57,58,59,60,61,62,63,64,65,66,67,0,1,2,3,4,5,6,7,8,9,10,11,12,13};
+typedef struct {
+  uint32_t cmd_id;
+  int      do_wait_ack;
+} RasPikeCommand;
+
+#define WAIT_ACK_COMMAND(cmd) {cmd,1}
+#define ONE_WAY_COMMAND(cmd) {cmd,0}
+
+static volatile int ack_received[256] = {0};
+
+static RasPikeCommand send_order[] = {
+  ONE_WAY_COMMAND(56), /* SENSOR_1 Config */
+  ONE_WAY_COMMAND(57), /* SENSOR_2 Config */
+  ONE_WAY_COMMAND(58), /* SENSOR_3 Config */
+  ONE_WAY_COMMAND(59), /* SENSOR_4 Config */
+  WAIT_ACK_COMMAND(60), /* SENSOR_1 Mode */
+  WAIT_ACK_COMMAND(61), /* SENSOR_2 Mode */
+  WAIT_ACK_COMMAND(62), /* SENSOR_3 Mode */
+  WAIT_ACK_COMMAND(63), /* SENSOR_4 Mode */
+  ONE_WAY_COMMAND(64), /* MOTOR_A Config */
+  ONE_WAY_COMMAND(65), /* MOTOR_B Config */
+  ONE_WAY_COMMAND(66), /* MOTOR_C Config */
+  ONE_WAY_COMMAND(67), /* MOTOR_D Config */
+  WAIT_ACK_COMMAND(5), /* MOTOR_A Stop */
+  WAIT_ACK_COMMAND(6), /* MOTOR_B Stop */
+  WAIT_ACK_COMMAND(7), /* MOTOR_C Stop */
+  WAIT_ACK_COMMAND(8), /* MOTOR_D Stop */
+  WAIT_ACK_COMMAND(9), /* MOTOR_A Reset */
+  WAIT_ACK_COMMAND(10), /* MOTOR_B Reset */
+  WAIT_ACK_COMMAND(11), /* MOTOR_C Reset */
+  WAIT_ACK_COMMAND(12), /* MOTOR_D Reset */
+  WAIT_ACK_COMMAND(13), /* GYRO Reset */
+  ONE_WAY_COMMAND(1),   /* MOTOR_A Power */
+  ONE_WAY_COMMAND(2),   /* MOTOR_B Power */
+  ONE_WAY_COMMAND(3),   /* MOTOR_C Power */
+  ONE_WAY_COMMAND(4),   /* MOTOR_D Power */
+  ONE_WAY_COMMAND(0), /* Panel LED */  
+};
 
 #define numof(table) (sizeof(table)/sizeof(table[0]))
 
@@ -182,33 +231,73 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     int k = 0;
     struct timespec wait = {0,0.5*1000000}; // 0.5msec wait
     for ( i = 0; i < numof(send_order); i++ ) {
-      int send_idx = send_order[i];
+      int send_idx = send_order[i].cmd_id;
       curMem = (unsigned int *)(VDEV_TX_DATA_BASE) + send_idx;
       prevMem =  (unsigned int *)previous_sent_buffer + send_idx;
       if ( *curMem != *prevMem ) {
 	int cmd = 1; /* cmd 1 (command) */
 	int value = abs(*(int*)curMem);
+
 	
 	/* Message Byte. First Bit is On */
 	buf[0] = (0x80|(send_idx&0x7f));
 	/* following bytes do not use First Bit */
 	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
-	k++;
 	buf[1] = (((value)>>7) & 0x1f);
 	if ( *(int*)curMem < 0 ) {
 	  buf[k] |= 0x20; /* Minus Bit */
 	}
 	k++;
 	buf[2] = (0x7f & value);
-	
-	len = cur_com->send(buf,3);
-	nanosleep(&wait,0);
+
+	struct timespec next,now;
+	int can_exit = 0;
+	ack_received[send_idx] = 0;
+	do {
+	  len = cur_com->send(buf,3);
+	  nanosleep(&wait,0);
+
+	  if ( !send_order[i].do_wait_ack ) {
+	    break;
+	  }
+	  timespec_get(&now, TIME_UTC);
+	  /* Wait Ack */
+	  volatile uint32_t *p = (ack_received+send_idx); 
+	  /* Retry time = 500msec */
+	  next.tv_nsec = now.tv_nsec + 500*1000000;
+	  next.tv_sec  = now.tv_sec;
+	  if ( next.tv_nsec >= 1000000000 ) {
+	    next.tv_nsec = next.tv_nsec - 1000000000;
+	    next.tv_sec++;
+	  }
+	  pthread_mutex_lock(&mutex);
+
+	  while (1) {
+	    if ( *p ) {
+	      can_exit = 1;
+	      break;
+	    }
+	    int ret = pthread_cond_timedwait(&cond,&mutex,&next);
+	    if ( ret == ETIMEDOUT ) {
+	      /* Retry */
+	      timespec_get(&now, TIME_UTC);	      
+	      printf("Resend %d %d.%d\n",send_idx,now.tv_sec,now.tv_nsec/1000000);
+	      break;
+	    }
+	  }
+	  pthread_mutex_unlock(&mutex);	  
+
+	  if ( can_exit ) {
+	    struct timespec cur;
+	    timespec_get(&cur, TIME_UTC);	      
+	    //	    printf("Cmd=%d spends %d msec\n",send_idx,get_msec_from_previous_time(&cur,&now));
+	    break;
+	  }
+	} while(1);
+
 	*prevMem = *curMem;
 	k++;
       }
-      curMem++;
-      prevMem++;
-
     }
     if ( k != 0 ) {
       //      len = cur_com->send(buf,k);
@@ -221,34 +310,13 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
     enable_interrupt(&old_set);      
 	
 
-#if 0 /* Old Version */
-    for ( i = 0; i < VDEV_TX_DATA_BODY_SIZE/4; i++ ) {
-      if ( *curMem != *prevMem ) {
-	send_command.elements[num].cmd_id = i * 4;
-	send_command.elements[num].data = *curMem;
-	*prevMem = *curMem;
-	num++;
-      }
-      curMem++;
-      prevMem++;
-    }
-#endif
-    
     // Clear reset area
     if ( reset_area_off && reset_area_size ) {
       memset((char*)(VDEV_TX_DATA_BASE+reset_area_off),0,reset_area_size);
     }
 
-#if 0    
-    if ( num == 0 ) return STD_E_OK;
-    send_command.com_header.cmd = 1;
-    send_command.num = num;
-    len = cur_com->send(&send_command,sizeof(RaspikeHeader)+sizeof(uint32_t)+sizeof(RaspikeBodyElement)*num);
-#endif
-    //    printf("Sent\n");
-
+  } 
     
-  }
   return STD_E_OK;
 
 }
@@ -268,9 +336,10 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	//	uint32 off = VDEV_RX_DATA_BASE - VDEV_BASE;
 	uint64 curr_stime;
 	char buf[256];
+	int type;
 	int cmd_id;
 	int val;
-
+	
 	memset(buf,0,sizeof(buf));
 	
 	while (1) {
@@ -279,7 +348,9 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	  while (1) {
 	    err = cur_com->receive(buf,1);
 
-	    if ( buf[0] == '@' ) {
+	    if ( buf[0] == '@' || buf[0] == '<') {
+	      /* type 0 is status, 1 is ack */
+	      type = (buf[0]=='@'?0:1);
 	      break;
 	    } else {
 	      printf("@=%x\n",buf[0]);
@@ -297,17 +368,28 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 
 	  //	   printf("Not=%s\n",buf);
 	  sscanf(buf,"%d:%d",&cmd_id,&val);
-	  //	  printf("cmd=%d val=%d\n",cmd_id,val);
+	  //	  printf("type=%d cmd=%d val=%d\n",type,cmd_id,val);
 
 	  if ( cmd_id < 0 || cmd_id >= (VDEV_RX_DATA_SIZE-VDEV_RX_DATA_BODY_OFF )) {
 	    printf("cmd value error\n!");
 	    continue;
 	  }
 
-	  char *p = VDEV_RX_DATA_BASE + cmd_id*4;
+	  if ( type == 0 ) {
+	    /* status */
+	    char *p = VDEV_RX_DATA_BASE + cmd_id*4;
 
-	  *(unsigned int*)p = *(unsigned int*)&val;
-	  
+	    *(unsigned int*)p = *(unsigned int*)&val;
+	    //	    printf("OFFSET=%d value=%d\n",cmd_id*4,val);
+	  } else {
+	    if ( cmd_id != 127 ) {
+	      /* ack */
+	      pthread_mutex_lock(&mutex);  
+	      ack_received[cmd_id] = 1;
+	      pthread_cond_broadcast(&cond);
+	      pthread_mutex_unlock(&mutex);
+	    }
+	  }
 	}
 
 	return STD_E_OK;
