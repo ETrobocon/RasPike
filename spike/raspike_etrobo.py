@@ -26,6 +26,11 @@ port_map = {
 
 hub.display.show(hub.Image.ALL_CLOCKS,delay=400,clear=True,wait=False,loop=True,fade=0)
 
+# reset gyro
+hub.motion.align_to_model(hub.BACK,hub.TOP)
+hub.motion.yaw_pitch_roll(0)
+
+
 while True:
     motor_A = getattr(hub.port, port_map["motor_A"]).motor
     motor_B = getattr(hub.port, port_map["motor_B"]).motor
@@ -97,11 +102,13 @@ color_sensor_change = 0
 gyro_reset =0
 other_command = 0
 ultrasonic_sensor_change = 0
-
+gyro_angle = 0
+gyro_sensor_mode_change = 0
 
 async def receiver():
     global num_command, num_fail, count, sum_time, prev_time
-    global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change
+    global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change,gyro_sensor_mode
+    global gyro_angle,gyro_sensor_mode_change
 
     print(" -- start")
     value = 0
@@ -226,6 +233,12 @@ async def receiver():
                 # 設定のまでのWait
                 ultrasonic_sensor_mode = value
                 ultrasonic_sensor_change = 1
+            elif cmd_id == 63:
+                #Port4 Gyro Sensor
+                gyro_sensor_mode = 0
+                if value == 4:
+                    hub.motion.yaw_pitch_roll(0)
+                gyro_sensor_mode_change = 1
 
             else:
                 other_command = cmd_id
@@ -250,6 +263,8 @@ async def notifySensorValues():
     print("Start Sensors")
     global ser
     global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change
+    global gyro_angle,gyro_sensor_mode_change
+
     touch_sensor_value = -1
     long_period = 0
     long_period_count = 0
@@ -306,6 +321,13 @@ async def notifySensorValues():
         await send_data(65, motor_rot_B.get()[0] * invert_B)
         await send_data(66, motor_rot_C.get()[0] * invert_C)
 
+        # Gyro
+        gyro = hub.motion.gyroscope()
+        #10msec周期なので、その分を加算する
+        await send_data(8,int(gyro[2]))
+        await send_data(7,int(hub.motion.yaw_pitch_roll()[0]))
+
+
         #タッチセンサー
         val = touch_sensor.is_pressed()
         if touch_sensor_value != val :
@@ -336,6 +358,8 @@ async def notifySensorValues():
         if gyro_reset == 1:
             gyro_reset = 0
             await send_ack(13)
+        if gyro_sensor_mode_change == 1:
+            await send_ack(63)
         if other_command != 0:
             await send_ack(other_command)
             other_command =0
