@@ -75,6 +75,7 @@ async def wait_read(ser, size):
     while True:
         buf = ser.read(size)
         if buf == b"" or buf is None:
+            # readの間はタスクスイッチされないので、ここで制御を渡す
             await uasyncio.sleep_ms(0)
             continue
         #        print("Val=%d" %(int.from_bytes(buf,'big')))
@@ -86,10 +87,21 @@ num_fail = 0
 prev_time = time.ticks_us()
 count = 0
 sum_time = 0
+motor_reset_A =0
+motor_reset_B =0
+motor_reset_C =0
+motor_stop_A = 0
+motor_stop_B = 0
+motor_stop_C = 0
+color_sensor_change = 0
+gyro_reset =0
+other_command = 0
+ultrasonic_sensor_change = 0
 
 
 async def receiver():
     global num_command, num_fail, count, sum_time, prev_time
+    global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change
 
     print(" -- start")
     value = 0
@@ -135,7 +147,7 @@ async def receiver():
 
                 break
 
-            #  print('cmd=%d,value=%d' %(cmd_id,value))
+            #print('cmd=%d,value=%d' %(cmd_id,value))
             if value < -2048 or value > 2048:
                 #                print("Value is invalid")
                 num_fail = num_fail + 1
@@ -157,22 +169,28 @@ async def receiver():
                     motor_A.brake()
                 else:
                     motor_A.float()
+                motor_stop_A = 1
             elif cmd_id == 6:
                 if value == 1:
                     motor_B.brake()
                 else:
                     motor_B.float()
+                motor_stop_B = 1
             elif cmd_id == 7:
                 if value == 1:
                     motor_C.brake()
                 else:
                     motor_C.float()
+                motor_stop_C = 1
             elif cmd_id == 9:
                 motor_A.preset(0)
+                motor_reset_A = 1
             elif cmd_id == 10:
                 motor_B.preset(0)
+                motor_reset_B = 1
             elif cmd_id == 11:
                 motor_C.preset(0)
+                motor_reset_C = 1
             elif cmd_id == 61:
                 # Port2 Color Sensor
                 # Color Sensor Mode
@@ -194,6 +212,7 @@ async def receiver():
                 #ダミーリード
                 cv = color_sensor.get()
                 color_sensor_mode = value
+                color_sensor_change = 1
             elif cmd_id == 62:
                 # Port3 Ultra Sonic Sensor
                 led = b''+chr(9)+chr(9)+chr(9)+chr(9)
@@ -206,11 +225,23 @@ async def receiver():
                     ultrasonic_sensor.mode(3)
                 # 設定のまでのWait
                 ultrasonic_sensor_mode = value
+                ultrasonic_sensor_change = 1
+
+            else:
+                other_command = cmd_id
+
 
 
 async def send_data(cmd, val):
     sendData = "@{:0=4}:{:0=6}".format(cmd, int(val))
-#    print(sendData)
+    #print(sendData)
+    ser.write(sendData)
+    #高速で送るとパケットが落ちるため、0.5msec休ませる
+    await uasyncio.sleep(0.0005)
+
+async def send_ack(cmd):
+    sendData = "<{:0=4}:000000".format(cmd)
+    #print(sendData)
     ser.write(sendData)
     #高速で送るとパケットが落ちるため、0.5msec休ませる
     await uasyncio.sleep(0.0005)
@@ -218,6 +249,7 @@ async def send_data(cmd, val):
 async def notifySensorValues():
     print("Start Sensors")
     global ser
+    global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change
     touch_sensor_value = -1
     long_period = 0
     long_period_count = 0
@@ -226,6 +258,10 @@ async def notifySensorValues():
     while True:
         # 次の更新タイミング  ここでは10msec
         next_time = time.ticks_us() + 10 * 1000
+
+
+
+
 
         # カラーセンサーの切り替えがあった場合、タイミングによってはget()がNoneになったり、
         # RGBではない値が取れたりするので、その場合は次の周期で通知する
@@ -279,6 +315,31 @@ async def notifySensorValues():
                 # Touchセンサーは加圧のアナログ値で、2048以上をタッチとして扱うため2048とする
                 sendVal = 2048
             await send_data(28,sendVal)
+
+        #Ackの処理
+        #モーターリセット
+        if motor_reset_A == 1:
+            motor_reset_A = 0
+            await send_ack(9)
+        if motor_reset_B == 1:
+            motor_reset_B = 0
+            await send_ack(10)
+        if motor_reset_C == 1:
+            motor_reset_C = 0
+            await send_ack(11)
+        if color_sensor_change == 1:
+            color_sensor_change = 0
+            await send_ack(61)
+        if ultrasonic_sensor_change == 1:
+            ultrasonic_sensor_change = 0
+            await send_ack(62)
+        if gyro_reset == 1:
+            gyro_reset = 0
+            await send_ack(13)
+        if other_command != 0:
+            await send_ack(other_command)
+            other_command =0
+
 
         #1sec周期で取る項目
         cur = time.ticks_us()
