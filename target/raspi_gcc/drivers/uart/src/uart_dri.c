@@ -76,10 +76,10 @@ void uart_dri_get_data_gyro(uint8 port,uint8_t mode, void *dest, SIZE size)
 
 	
 	switch (mode) {
-	case 0:
+	case 1:
 		addr = (const uint32_t *)EV3_SENSOR_ADDR_ANGLE;
 		break;
-	case 1:
+	case 2:
 		addr = (const uint32_t *)EV3_SENSOR_ADDR_RATE;
 		break;
 	case 4:

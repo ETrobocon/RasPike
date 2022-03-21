@@ -241,8 +241,8 @@ error_exit:
 }
 
 typedef enum {
-	GYRO_ANG  = 0,
-	GYRO_RATE = 1,
+	GYRO_ANG  = 1,
+	GYRO_RATE = 2,
 	GYRO_GnA  = 3,
 	GYRO_CAL  = 4,
 } GYRO_SENSOR_MODES;
