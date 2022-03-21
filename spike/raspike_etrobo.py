@@ -27,9 +27,9 @@ port_map = {
 hub.display.show(hub.Image.ALL_CLOCKS,delay=400,clear=True,wait=False,loop=True,fade=0)
 
 # reset gyro
-hub.motion.align_to_model(hub.BACK,hub.TOP)
+hub.motion.align_to_model(hub.FRONT,hub.TOP)
 hub.motion.yaw_pitch_roll(0)
-
+time.sleep(1)
 
 while True:
     motor_A = getattr(hub.port, port_map["motor_A"]).motor
