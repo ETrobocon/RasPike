@@ -64,12 +64,12 @@ SRCLANG = @(SRCLANG)
 ifeq ($(SRCLANG),c)
 	LIBS = -lm -lc -lgcc
 	COPTS += -std=c99
-	COPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF
+	COPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF -DMAKE_RASPIKE
 endif
 ifeq ($(SRCLANG),c++)
 	USE_CXX = true
 	CXXOPTS += -std=c99
-	CXXOPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF
+	CXXOPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF -DMAKE_RASPIKE
 	CXXLIBS = -lstdc++ -lm -lc -lgcc -std=c++11 
 #	CXXRTS = cxxrt.o newlibrt.o
 endif
