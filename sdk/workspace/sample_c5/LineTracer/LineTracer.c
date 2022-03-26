@@ -17,7 +17,8 @@ void tracer_task(intptr_t unused) {
     /* 走行モータ制御 */
     motor_drive_control(steering_amount);
 
-    return;
+    /* タスク終了 */
+    ext_tsk();
 }
 
 /* ステアリング操舵量の計算 */
