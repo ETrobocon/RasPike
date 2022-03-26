@@ -281,7 +281,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 	    if ( ret == ETIMEDOUT ) {
 	      /* Retry */
 	      timespec_get(&now, TIME_UTC);	      
-	      printf("Resend %d %d.%d\n",send_idx,now.tv_sec,now.tv_nsec/1000000);
+	      //printf("Resend %d %d.%d\n",send_idx,now.tv_sec,now.tv_nsec/1000000);
 	      break;
 	    }
 	  }
