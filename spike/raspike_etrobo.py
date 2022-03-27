@@ -60,12 +60,22 @@ invert_C = -1
 color_sensor_mode = 0
 ultrasonic_sensor_mode = 0
 
+#最終の有効な通信を受け取った時刻
+last_command_time = 0
+#通信断絶を検知する時間
+detect_com_fail_period = 5000000
+
 motor_rot_A.mode(2)
 motor_rot_B.mode(2)
 motor_rot_C.mode(2)
 
 # シリアルポートの設定
 spike_serial_port = port_map["spike_serial_port"]
+
+
+def detect_com_fail():
+    hub.display.show(hub.Image.SAD,delay=400,clear=True,wait=False,loop=False,fade=0)
+    hub.led(9)
 
 
 def wait_serial_ready():
@@ -77,9 +87,13 @@ def wait_serial_ready():
 
 
 async def wait_read(ser, size):
+    global last_command_time
     while True:
         buf = ser.read(size)
         if buf == b"" or buf is None:
+            # 最終の有効コマンドを受け取ってから5秒経ったら、通信断絶として、画面表示を変える
+            if last_command_time > 0 and (last_command_time + detect_com_fail_period ) < time.ticks_us():
+                detect_com_fail()
             # readの間はタスクスイッチされないので、ここで制御を渡す
             await uasyncio.sleep_ms(0)
             continue
@@ -108,7 +122,7 @@ gyro_sensor_mode_change = 0
 async def receiver():
     global num_command, num_fail, count, sum_time, prev_time
     global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change,gyro_sensor_mode
-    global gyro_angle,gyro_sensor_mode_change
+    global gyro_angle,gyro_sensor_mode_change,last_command_time
 
     print(" -- start")
     value = 0
@@ -159,6 +173,9 @@ async def receiver():
                 #                print("Value is invalid")
                 num_fail = num_fail + 1
                 continue
+
+            # 有効なコマンドを受け取った最後の時間
+            last_command_time = time.ticks_us()
 
             # 高速化のために、motorスピードを優先して判定する
             if cmd_id == 1:
