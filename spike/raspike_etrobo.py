@@ -266,10 +266,11 @@ async def notifySensorValues():
     global gyro_angle,gyro_sensor_mode_change
 
     touch_sensor_value = -1
+    prev_button_command = 0
     long_period = 0
     long_period_count = 0
-    #500msec周期
-    long_period_time_us = 500000
+    #100msec周期
+    long_period_time_us = 100000
     while True:
         # 次の更新タイミング  ここでは10msec
         next_time = time.ticks_us() + 10 * 1000
@@ -365,14 +366,27 @@ async def notifySensorValues():
             other_command =0
 
 
-        #1sec周期で取る項目
+        #100msec周期で取る項目
         cur = time.ticks_us()
         if long_period < cur:
             #電流/電圧は1sec毎に送るが、位相はずらす
-            if ( long_period_count % 2 ) == 0:
+            if ( (long_period_count+5) % 10 ) == 0:
                 await send_data(29,hub.battery.current())
-            else:
+            if ( (long_period_count) % 10 ) == 0:
                 await send_data(30,hub.battery.voltage())
+            
+            #本体ボタン(100msec毎)
+            button_command = 0
+            if hub.button.left.is_pressed():
+                button_command = 1
+            if hub.button.right.is_pressed():
+                button_command = button_command + 2
+            if hub.button.center.is_pressed():
+                button_command = button_command + 16
+            if button_command != prev_button_command:
+                await send_data(0,button_command)
+                prev_button_command = button_command
+
             long_period = cur + long_period_time_us
             long_period_count = long_period_count + 1
 
