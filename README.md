@@ -1,5 +1,7 @@
 # Raspi用 SPIKE制御開発環境「RasPike（ラスパイク）」
 
+3/27 現在ベータ版として公開しています。4/endに正式版となる予定ですが、その後も不具合対応が行われる予定です。
+
 ## はじめに
 
 この環境はETロボコン用にraspberryPiとLEGO(R)のSPIKE Prime(R)を接続して動作させるためのものです。raspberry側のEV3RT互換環境と、SPIKE側の制御ソフトからなり、これらを総称して「RasPike」と呼びます。
