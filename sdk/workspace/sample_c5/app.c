@@ -20,5 +20,6 @@ void main_task(intptr_t unused) {
     /* ライントレースタスクの起動 */
     sta_cyc(LINE_TRACER_TASK_CYC);
 
-    return;
+    /* タスク終了 */
+    ext_tsk();
 }
