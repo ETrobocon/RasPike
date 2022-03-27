@@ -36,28 +36,28 @@ public:
      * 経過時間取得
      * 開始時間からの経過時間を取得する
      * @param -
-     * @return 経過時間[msec]
+     * @return 経過時間[usec]
      */
     uint32_t now(void) const;
 
     /**
      * 自タスク遅延
-     * @param duration 遅延時間[msec]
+     * @param duration 遅延時間[usec]
      * @return -
      */
     inline void wait(uint32_t duration)
     {
-        dly_tsk(duration * 1000);
+        dly_tsk(duration);
     }
 
     /**
      * 自タスクスリープ
-     * @param duration スリープ時間[msec]
+     * @param duration スリープ時間[usec]
      * @return -
      */
     inline void sleep(uint32_t duration)
     {
-        tslp_tsk(duration * 1000);
+        tslp_tsk(duration);
     }
 
 protected:
