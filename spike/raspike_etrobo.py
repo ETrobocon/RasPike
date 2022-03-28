@@ -76,6 +76,7 @@ spike_serial_port = port_map["spike_serial_port"]
 def detect_com_fail():
     hub.display.show(hub.Image.SAD,delay=400,clear=True,wait=False,loop=False,fade=0)
     hub.led(9)
+    stop_all()
 
 
 def wait_serial_ready():
@@ -123,6 +124,7 @@ async def receiver():
     global num_command, num_fail, count, sum_time, prev_time
     global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change,gyro_sensor_mode
     global gyro_angle,gyro_sensor_mode_change,last_command_time
+    global motor_stop_A,motor_stop_B,motor_stop_C
 
     print(" -- start")
     value = 0
@@ -281,6 +283,8 @@ async def notifySensorValues():
     global ser
     global motor_reset_A,motor_reset_B,motor_reset_C,color_sensor_change,gyro_reset,other_command,ultrasonic_sensor_change
     global gyro_angle,gyro_sensor_mode_change
+    global motor_stop_A,motor_stop_B,motor_stop_C
+
 
     touch_sensor_value = -1
     prev_button_command = 0
@@ -377,7 +381,18 @@ async def notifySensorValues():
             gyro_reset = 0
             await send_ack(13)
         if gyro_sensor_mode_change == 1:
+            gyro_sensor_mode_change = 0
             await send_ack(63)
+        if motor_stop_A == 1:
+            motor_stop_A = 0
+            await send_ack(5)
+        if motor_stop_B == 1:
+            motor_stop_B = 0
+            await send_ack(6)
+        if motor_stop_C == 1:
+            motor_stop_C = 0
+            await send_ack(7)
+
         if other_command != 0:
             await send_ack(other_command)
             other_command =0
@@ -424,7 +439,7 @@ async def main_task():
     gc.collect()
     uasyncio.create_task(notifySensorValues())
     uasyncio.create_task(receiver())
-    await uasyncio.sleep(10*60)
+    await uasyncio.sleep(1*60)
     global num_command, num_fail, count, sum_time, count
     stop_all()
     while True:
