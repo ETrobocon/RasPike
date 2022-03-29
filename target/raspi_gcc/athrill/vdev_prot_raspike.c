@@ -245,7 +245,7 @@ Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 	/* data : 14bit. 1bit(signed) + 6bit[higer] + 7bit[lower] */
 	buf[1] = (((value)>>7) & 0x1f);
 	if ( *(int*)curMem < 0 ) {
-	  buf[k] |= 0x20; /* Minus Bit */
+	  buf[1] |= 0x20; /* Minus Bit */
 	}
 	k++;
 	buf[2] = (0x7f & value);
