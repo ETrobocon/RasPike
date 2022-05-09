@@ -4,12 +4,24 @@
 #include <string.h>
 #include <time.h>
 
-#define RASPIKE_NOT_USED (999999)
+
+
+static uart_wait_mode_change_func fg_wait_mode_change_func = 0;
+
+void uart_set_wait_mode_change_func(uart_wait_mode_change_func func)
+{
+  fg_wait_mode_change_func = func;
+}
+					
 
 /* モードチェンジを行った際に、実際に値が取れるまで待つ。必要に応じて再送を行う*/
 static void uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_addr)
 {
 
+  if ( fg_wait_mode_change_func ) {
+    fg_wait_mode_change_func(port,mode,check_addr);
+  }
+#if 0
   uint8_t current_mode = sil_rew_mem((uint32_t *)EV3_SENSOR_MODE_INX(port));
   if ( current_mode != mode ) {
     /* モードが切り替わった*/
@@ -33,6 +45,7 @@ static void uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_add
       nanosleep(&t,0);
     } while(1);
   }
+#endif
 }
   
 

@@ -11,6 +11,9 @@
 #include "vdev_private.h"
 #include "target_kernel_impl.h"
 #include <pthread.h>
+#include "uart_dri.h"
+#include "sil.h"
+#include "ev3_vdev.h"
 
 static uint32 reset_area_off = 0;
 static uint32 reset_area_size  = 0; 
@@ -74,6 +77,34 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static char previous_sent_buffer[VDEV_TX_DATA_SIZE];
 
+#define RASPIKE_NOT_USED (999999)
+static void raspike_uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_addr)
+{
+
+  /* まずvalueを通信上使われない999999に変更する */
+  sil_wrw_mem(check_addr,RASPIKE_NOT_USED);
+
+  /* モードチェンジのコマンドを送出する*/
+  sil_wrw_mem((uint32_t *)EV3_SENSOR_MODE_INX(port),mode);
+  volatile uint32_t *addr = check_addr;
+    
+  /* Ackは受け取ったが、実際に値としてRASPIKE_NOT_USED 以外の値が設定されることを待つ */
+  struct timespec t = {0,10*1000000};
+    
+  do {
+    uint32_t data = sil_rew_mem(addr);
+    //printf("port=%d val=%d\n",port,data);
+    if ( data != RASPIKE_NOT_USED ) {
+      break;
+    }
+    nanosleep(&t,0);
+  } while(1);
+}
+
+
+
+
+
 int vdevProtRaspikeInit(const VdevIfComMethod *com)
 {
   Std_ReturnType err;
@@ -86,7 +117,10 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
   
   /* デバイスIOに書き込んだ際に呼ばれるコールバック関数 */
   SilSetWriteHook(vdevProtRaspikeSilCb);
-
+  
+  // Uart Driverへのコールバック
+  uart_set_wait_mode_change_func(raspike_uart_wait_mode_change);
+  
   // Reset Area
   err = cpuemu_get_devcfg_value("DEVICE_CONFIG_RESET_AREA_OFFSET", &reset_area_off);
   printf("DEVICE_CONFIG_RESET_AREA_OFFSET=%d\n",reset_area_off);
