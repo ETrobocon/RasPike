@@ -111,15 +111,12 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
 
   cur_com = com;
 
-  // 0 を設定された時に動作するように-1を設定する
   memset((char*)VDEV_TX_DATA_BASE,0,VDEV_TX_DATA_BODY_SIZE);
   memset(previous_sent_buffer,0,VDEV_TX_DATA_BODY_SIZE);
   
   /* デバイスIOに書き込んだ際に呼ばれるコールバック関数 */
   SilSetWriteHook(vdevProtRaspikeSilCb);
   
-  // Uart Driverへのコールバック
-  uart_set_wait_mode_change_func(raspike_uart_wait_mode_change);
   
   // Reset Area
   err = cpuemu_get_devcfg_value("DEVICE_CONFIG_RESET_AREA_OFFSET", &reset_area_off);
@@ -135,6 +132,8 @@ int vdevProtRaspikeInit(const VdevIfComMethod *com)
 
   err = mpthread_start_proc(vdev_thrid);
 
+
+  
   return 0;
 }  
 
@@ -241,7 +240,18 @@ static RasPikeCommand send_order[] = {
 Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
 {
   int len;
+  static int is_first_call = 0;
 
+  if ( !is_first_call ) {
+    /* 最初のコマンド送信の際に、Uart Driverへのコールバックを設定する
+       これ以後はセンサーの切り替え時に値が変更されるのを待つようになる
+       このタイミングよりも前にやると、センサー値の変更のポーリングが永久に
+       待つことがある
+    */
+    uart_set_wait_mode_change_func(raspike_uart_wait_mode_change);
+    is_first_call = 1;
+  }
+  
   if ( size != 1 ) return STD_E_OK;
 
   if (addr == VDEV_TX_FLAG(0)) {

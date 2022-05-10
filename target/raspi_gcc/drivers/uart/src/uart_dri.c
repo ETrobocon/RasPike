@@ -18,34 +18,14 @@ void uart_set_wait_mode_change_func(uart_wait_mode_change_func func)
 static void uart_wait_mode_change(uint8_t port,uint8_t mode, uint32_t *check_addr)
 {
 
-  if ( fg_wait_mode_change_func ) {
-    fg_wait_mode_change_func(port,mode,check_addr);
-  }
-#if 0
+
   uint8_t current_mode = sil_rew_mem((uint32_t *)EV3_SENSOR_MODE_INX(port));
   if ( current_mode != mode ) {
     /* モードが切り替わった*/
-    
-    /* まずvalueを通信上使われない999999に変更する */
-    sil_wrw_mem(check_addr,RASPIKE_NOT_USED);
-
-    /* モードチェンジのコマンドを送出する*/
-    sil_wrw_mem((uint32_t *)EV3_SENSOR_MODE_INX(port),mode);
-    volatile uint32_t *addr = check_addr;
-    
-    /* Ackは受け取ったが、実際に値としてRASPIKE_NOT_USED 以外の値が設定されることを待つ */
-    struct timespec t = {0,10*1000000};
-    
-    do {
-      uint32_t data = sil_rew_mem(addr);
-      //printf("port=%d val=%d\n",port,data);
-      if ( data != RASPIKE_NOT_USED ) {
-	break;
-      }
-      nanosleep(&t,0);
-    } while(1);
+    if ( fg_wait_mode_change_func ) {
+      fg_wait_mode_change_func(port,mode,check_addr);
+    }
   }
-#endif
 }
   
 
