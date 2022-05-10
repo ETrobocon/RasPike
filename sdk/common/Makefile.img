@@ -68,8 +68,8 @@ ifeq ($(SRCLANG),c)
 endif
 ifeq ($(SRCLANG),c++)
 	USE_CXX = true
-	CXXOPTS += -std=c99
-	CXXOPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF -DMAKE_RASPIKE
+	COPTS += -std=c99
+	COPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF -DMAKE_RASPIKE
 	CXXLIBS = -lstdc++ -lm -lc -lgcc -std=c++11 
 #	CXXRTS = cxxrt.o newlibrt.o
 endif
