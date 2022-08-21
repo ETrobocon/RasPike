@@ -252,13 +252,12 @@ async def receiver():
                 # 設定のまでのWait
                 ultrasonic_sensor_mode = value
                 ultrasonic_sensor_change = 1
-            elif cmd_id == 63:
+            elif cmd_id == 13:
                 #Port4 Gyro Sensor
                 gyro_sensor_mode = 0
-                if value == 4:
+                if value == 1:
                     hub.motion.yaw_pitch_roll(0)
-                gyro_sensor_mode_change = 1
-
+                gyro_reset = 1
             else:
                 other_command = cmd_id
 
