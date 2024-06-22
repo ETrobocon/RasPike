@@ -30,7 +30,7 @@ static int16_t steering_amount_calculation(void){
     rgb_raw_t rgb_val;           /* カラーセンサ取得値 */
 
     /* 目標輝度値の計算 */
-    target_brightness = (WHITE_BRIGHTNESS - BLACK_BRIGHTNESS) / 2;
+    target_brightness = (WHITE_BRIGHTNESS + BLACK_BRIGHTNESS) / 2;
 
     /* カラーセンサ値の取得 */
     ev3_color_sensor_get_rgb_raw(color_sensor, &rgb_val);
