@@ -18,7 +18,7 @@
 
 
 
-Std_ReturnType vdevUdpInit(void)
+Std_ReturnType vdevUdpInit(void *obj)
 {
   Std_ReturnType err;
   uint32 portno;

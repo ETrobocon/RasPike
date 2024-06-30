@@ -11,6 +11,7 @@
 #include "vdev_com_serial.h"
 
 
+
 /* assume this area is cleared by C runtime */
 unsigned char athrill_vdev_mem[VDEV_RX_DATA_SIZE+VDEV_TX_FLAG_SIZE+VDEV_TX_FLAG_SIZE];
 
@@ -18,20 +19,23 @@ VdevControlType vdev_control;
 
 static const VdevIfComMethod *current_com = 0;
 
-static const VdevIfComMethod VdevComUDP = {
+static VdevIfComMethod VdevComUDP = {
   .init = vdevUdpInit,
   .send = vdevUdpSend,
-  .receive = vdevUdpReceive
+  .receive = vdevUdpReceive,
+  .info = 0
 };
 
-static const VdevIfComMethod VdevComSerial = {
+static VdevIfComMethod VdevComSerial = {
   .init = vdevSerialInit,
   .send = vdevSerialSend,
-  .receive = vdevSerialReceive
+  .receive = vdevSerialReceive,
+  .info = 0
 };
 
 #include "vdev_prot_athrill.h"
 #include "vdev_prot_raspike.h"
+
 static const VdevProtocolHandler *current_prot = 0;
 
 /* Athrillと同じ形式のハンドラ*/
@@ -46,6 +50,26 @@ static const VdevProtocolHandler vdevProtRaspike = {
 
 };
 
+#ifdef USE_RASPIKE_ART
+#include "vdev_com_usb.h"
+#include "vdev_prot_raspike_art.h"
+/* RasPi-ART / SPIKE用コマンド*/
+
+static VdevIfComMethod VdevComUSB = {
+  .init = vdevUSBlInit,
+  .send = vdevUSBSend,
+  .receive = vdevUSBReceive,
+  .info = 0
+};
+
+
+static const VdevProtocolHandler vdevProtRaspikeART = {
+  .init = vdevProtRaspikeARTInit
+};
+
+#endif 
+
+
 
 
 int initialize_vdev(void)
@@ -55,7 +79,8 @@ int initialize_vdev(void)
 
   /* Get Communication  Handler */
   /*
-    UDP / SERIAL
+    UDP / SERIAL / USB
+    USB is for RasPike-ART. RasPike-ART doesn't use VdevProtocolHandler 
   */
   char *comMethod;
   /* default */
@@ -67,9 +92,16 @@ int initialize_vdev(void)
     } else if ( !strcmp(comMethod,"SERIAL")) {
       current_com = &VdevComSerial;
     }
+
+#ifdef USE_RASPIKE_ART
+    else if ( !strcmp(comMethod,"USB")) {
+      current_com = &VdevComUSB;
+    }
+#endif    
   }
 
-  current_com->init();
+  if ( current_com )
+    current_com->init((void*)current_com);
   
   /* Protocol Type */
   /* ATHRILL / PROXY */
@@ -82,6 +114,13 @@ int initialize_vdev(void)
     } else if ( !strcmp(comMethod,"RASPIKE") ) {
       current_prot = &vdevProtRaspike;
     }
+
+#ifdef USE_RASPIKE_ART    
+    else if ( !strcmp(comMethod,"RASPIKE-ART") ) {
+      current_prot = &vdevProtRaspikeART;
+    }
+#endif    
+       
   }
 
   current_prot->init(current_com);

@@ -271,6 +271,20 @@ CONFIG_EV3RT_APPLICATION = 1
 include @(APPLDIRS)/Makefile.inc
 
 #
+# For RasPike-ART
+#
+ifneq ($(USE_RASPIKE_ART),)
+RASPIKE-ART_DIR=../../RasPike-ART
+LIBRASPIKE-ART_DIR=$(RASPIKE-ART_DIR)/lib
+LIBRASPIKE-ART=libraspike-art.a
+include ../common/Makefile.raspike-art
+endif
+
+
+
+
+
+#
 #  システムサービスに関する定義
 #
 SYSSVC_DIRS := $(TECSGENDIR) $(SRCDIR)/tecs_kernel \

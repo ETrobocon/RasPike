@@ -15,13 +15,21 @@ APPLDIR = $(shell cat appdir)
 include $(APPLDIR)/Makefile.inc
 endif
 
+DEVICE_CONFIG=../common/device_config.txt
+
+ifneq ($(USE_RASPIKE_ART),)
+include ../common/Makefile.raspike-art
+DEVICE_CONFIG=../common/device_config_raspike-art.txt
+endif
+
+
 start: appdir
 	$(ADDITIONAL_PRE_APPL)
-	sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d ../common/device_config.txt
+	sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d $(DEVICE_CONFIG)
 
 startsim: appdir
 	$(ADDITIONAL_PRE_APPL)
-	sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d ../common/device_config_athrill.txt
+	sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d $(DEVICE_CONFIG)
 
 debug: appdir
 	$(ADDITIONAL_PRE_APPL)

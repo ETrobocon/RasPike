@@ -1,0 +1,18 @@
+$(LIBRASPIKE-ART_DIR)/$(LIBRASPIKE-ART):
+	(cd $(RASPIKE-ART_DIR)/build/obj-libraspike-art;make)
+
+LIBPYBRICKS_DIR=$(RASPIKE-ART_DIR)/external/libpybricks
+
+
+INCLUDES += -I$(RASPIKE-ART_DIR)/drivers/include \
+	-I$(RASPIKE-ART_DIR)/drivers/include/spike/pup \
+	-I$(RASPIKE-ART_DIR)/drivers/include/spike/hub \
+	-I$(RASPIKE-ART_DIR)/drivers \
+	-I$(LIBPYBRICKS_DIR)/lib/pbio/include/pbio \
+	-I$(LIBPYBRICKS_DIR)/lib/pbio/include \
+	-I$(RASPIKE-ART_DIR)/include
+
+CFLAGS += -DUSE_RASPIKE_ART
+
+APPL_COBJS+=vdev_com_usb.o vdev_prot_raspike_art.o
+LIBS+=$(LIBRASPIKE-ART_DIR)/$(LIBRASPIKE-ART)

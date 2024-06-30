@@ -62,12 +62,23 @@ ifdef img
 
 include $(APPLDIR)/Makefile.inc
 
+NEED_LIBRARIES:=
+ifneq ($(USE_RASPIKE_ART),)
+RASPIKE-ART_DIR=$(SDKDIR)/../RasPike-ART
+LIBRASPIKE-ART_DIR=$(RASPIKE-ART_DIR)/lib
+LIBRASPIKE=ART=libraspike-art.a
+NEED_LIBRARIES+=$(LIBRASPIKE-ART_DIR)/$(LIBRASPIKE-ART)
+#include ../common/Makefile.raspike-art
+endif
+
 ifeq (,$(wildcard $(LIBKERNELDIR)/libkernel.a))
 # Build libkernel.a if not exist
-img: $(APPLDIR) $(LIBKERNELDIR)/libkernel.a prepare-obj-folder
+#img: $(APPLDIR) $(LIBKERNELDIR)/libkernel.a prepare-obj-folder
+NEED_LIBRARIES+=$(LIBKERNELDIR)/libkernel.a
 else
-img: $(APPLDIR) prepare-obj-folder
+#img: $(APPLDIR) prepare-obj-folder
 endif
+img: $(APPLDIR) $(NEED_LIBRARIES) prepare-obj-folder
 	(cd $(OBJDIR) && \
 	make kernel_cfg.h && \
 	make -j8 > /dev/null ) && \

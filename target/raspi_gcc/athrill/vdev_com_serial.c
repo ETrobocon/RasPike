@@ -23,7 +23,7 @@ static int  device_fd = 0;
 
 
 
-Std_ReturnType vdevSerialInit(void)
+Std_ReturnType vdevSerialInit(void *obj)
 {
   Std_ReturnType err;
   char *dev_name = "/dev/ttyAMA1";
