@@ -1,6 +1,12 @@
 # Raspi用 SPIKE制御開発環境「RasPike（ラスパイク）」
 
-3/27 現在ベータ版として公開しています。4/endに正式版となる予定ですが、その後も不具合対応が行われる予定です。
+2024/6/30 RasPike-ARTバージョンを公開しました。
+RasPike-ARTバージョンの説明以下を参照ください。
+
+https://github.com/ETrobocon/RasPike/wiki/RasPike%E2%80%90ARTモード
+RasPike-ARTモードを使う場合、RasPikeのドキュメントのほとんどが無効になりますので、上記のリンクの情報を使ってください。
+
+
 
 ## はじめに
 
