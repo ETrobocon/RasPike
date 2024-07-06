@@ -1,3 +1,4 @@
 [submodule "RasPike-ART"]
 	path = RasPike-ART
 	url = https://github.com/ytoi/RasPike-ART.git
+	branch = main

@@ -21,6 +21,7 @@ ifneq ($(USE_RASPIKE_ART),)
 include ../common/Makefile.raspike-art
 DEVICE_CONFIG=../common/device_config_raspike-art.txt
 
+
 setup_spike_env:
 	(cd ../../RasPike-ART/spike;./spike_env_setup_linux.sh)
 
@@ -30,6 +31,8 @@ update_spike:
 
 
 endif
+
+CLEAN_FILES+=../../RasPike-ART/lib/*.a
 
 
 start: appdir

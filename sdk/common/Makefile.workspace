@@ -143,7 +143,7 @@ uploadimg:
 
 
 clean:
-	rm -rf $(OBJDIR)
+	rm -rf $(OBJDIR) $(CLEAN_FILES)
 
 realclean: clean
 	rm -rf $(notdir $(OBJFILENAME)) uImage app $(LIBKERNELDIR)/libkernel.a

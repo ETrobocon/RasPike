@@ -20,3 +20,6 @@ CFLAGS += -DUSE_RASPIKE_ART
 
 APPL_COBJS+=vdev_com_usb.o vdev_prot_raspike_art.o
 EXTRA_LIBS+=$(LIBRASPIKE-ART_DIR)/$(LIBRASPIKE-ART)
+
+clean_art:
+	(cd $(RASPIKE-ART_DIR)/build/obj-libraspike-art;make clean)
