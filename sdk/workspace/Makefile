@@ -22,12 +22,6 @@ include ../common/Makefile.raspike-art
 DEVICE_CONFIG=../common/device_config_raspike-art.txt
 
 
-setup_spike_env:
-	(cd ../../RasPike-ART/spike;./spike_env_setup_linux.sh)
-
-
-update_spike:
-	(cd ../../RasPike-ART/spike;./spike_update_linux.sh)
 
 
 endif

@@ -23,3 +23,10 @@ EXTRA_LIBS+=$(LIBRASPIKE-ART_DIR)/$(LIBRASPIKE-ART)
 
 clean_art:
 	(cd $(RASPIKE-ART_DIR)/build/obj-libraspike-art;make clean)
+
+setup_spike_env:
+	(cd ../../RasPike-ART/spike;./spike_env_setup_linux.sh)
+
+
+update_spike:
+	(cd ../../RasPike-ART/spike;./spike_update_linux.sh)
