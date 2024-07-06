@@ -18,12 +18,9 @@ extern "C" {
 #define LEFT_EDGE         (-1) 
 #define RIGHT_EDGE        (1) 
 
-#include "spike/pup/motor.h"
-#include "spike/pup/colorsensor.h"
+#include "pbio/port.h"  
 
-  
-  extern void LineTracer_Configure(pup_motor_t *left_motor,pup_motor_t *right_motor,pup_device_t *color_sensor);
-
+  extern void LineTracer_Configure(pbio_port_id_t left_motor_port, pbio_port_id_t right_motor_port, pbio_port_id_t color_sensor_port);
   
 #ifdef __cplusplus
 }

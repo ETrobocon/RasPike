@@ -2,6 +2,9 @@
 #include "LineTracer.h"
 #include <stdio.h>
 
+#include "spike/pup/motor.h"
+#include "spike/pup/colorsensor.h"
+
 /* 関数プロトタイプ宣言 */
 static int16_t steering_amount_calculation(void);
 static void motor_drive_control(int16_t);
@@ -10,11 +13,17 @@ static pup_motor_t *fg_left_motor;
 static pup_motor_t *fg_right_motor;
 static pup_device_t *fg_color_sensor;
 
-void LineTracer_Configure(pup_motor_t *left_motor,pup_motor_t *right_motor,pup_device_t *color_sensor)
+void LineTracer_Configure(pbio_port_id_t left_motor_port, pbio_port_id_t right_motor_port, pbio_port_id_t color_sensor_port)
 {
-  fg_left_motor = left_motor;
-  fg_right_motor = right_motor;
-  fg_color_sensor = color_sensor;
+
+  /* センサー入力ポートの設定 */
+  fg_color_sensor = pup_color_sensor_get_device(color_sensor_port);
+  fg_left_motor   = pup_motor_get_device(left_motor_port);
+  fg_right_motor   = pup_motor_get_device(right_motor_port);  
+
+  pup_motor_setup(fg_left_motor,PUP_DIRECTION_CLOCKWISE,true);
+  pup_motor_setup(fg_right_motor,PUP_DIRECTION_COUNTERCLOCKWISE,true);  
+
 }
 
 
