@@ -21,8 +21,8 @@ void LineTracer_Configure(pbio_port_id_t left_motor_port, pbio_port_id_t right_m
   fg_left_motor   = pup_motor_get_device(left_motor_port);
   fg_right_motor   = pup_motor_get_device(right_motor_port);  
 
-  pup_motor_setup(fg_left_motor,PUP_DIRECTION_CLOCKWISE,true);
-  pup_motor_setup(fg_right_motor,PUP_DIRECTION_COUNTERCLOCKWISE,true);  
+  pup_motor_setup(fg_left_motor,PUP_DIRECTION_COUNTERCLOCKWISE,true);
+  pup_motor_setup(fg_right_motor,PUP_DIRECTION_CLOCKWISE,true);  
 
 }
 
