@@ -24,7 +24,7 @@ static RPComDescriptor *fgDesc;
 
 Std_ReturnType vdevUSBlInit(void *obj)
 {
-  char *dev_name = "/dev/ttyACM0";
+  char *dev_name = "/dev/USB_SPIKE";
   VdevIfComMethod *this = (VdevIfComMethod*)obj;
   
   Std_ReturnType err = cpuemu_get_devcfg_string("VDEV_SERIAL_DEV_NAME",&dev_name);

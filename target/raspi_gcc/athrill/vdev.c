@@ -85,7 +85,11 @@ int initialize_vdev(void)
   char *comMethod;
   /* default */
   current_com = &VdevComUDP;
-
+  // #19 to call init in constructor, change default com to USB
+#ifdef USE_RASPIKE_ART
+  current_com = &VdevComUSB;
+#endif  
+  
   if (cpuemu_get_devcfg_string("DEVICE_CONFIG_VDEV_COM", &comMethod) == STD_E_OK) {
     if ( !strcmp(comMethod,"UDP") ) {
       current_com = &VdevComUDP;
@@ -107,7 +111,13 @@ int initialize_vdev(void)
   /* ATHRILL / PROXY */
   /* default */
   current_prot = &vdevProtAthrill;
- 
+
+#ifdef USE_RASPIKE_ART
+  // #19 to call init in constructor, change default com to RasPikeART
+  current_prot = &vdevProtRaspikeART;
+#endif  
+
+  
   if (cpuemu_get_devcfg_string("DEVICE_CONFIG_VDEV_PROTOCOL", &comMethod) == STD_E_OK) {
     if ( !strcmp(comMethod,"ATHRILL") ) {
       current_prot = &vdevProtAthrill;
@@ -130,10 +140,22 @@ int initialize_vdev(void)
   
 
 
+#ifdef USE_RASPIKE_ART
+// for RasPike-ART
+// #19 use high priority constructor 
+__attribute__((constructor(101))) void vdev_initializer(void) 
+{
+  printf("vdev initializer(fast) called\n");
+  initialize_vdev();
 
+}
+
+#else
+// for Old RasPike
 
 __attribute__((constructor)) void vdev_initializer(void) 
 {
   printf("vdev initializer called\n");
   deviceStartupCb = initialize_vdev;
 }
+#endif
