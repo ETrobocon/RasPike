@@ -212,6 +212,8 @@ typedef	struct acvct {				/* アクセス許可ベクタ */
  *  以下のALIGN_TYPEの定義は，アラインメントの単位が2の巾乗であることを
  *  仮定している．
  */
+
+#ifndef __cplusplus  
 #ifndef offsetof
 #define	offsetof(structure, field) \
 		((uintptr_t)(((char *) &(((structure *) 0)->field)) - ((char *) 0)))
@@ -225,7 +227,8 @@ typedef	struct acvct {				/* アクセス許可ベクタ */
 #define ALIGN_TYPE(addr, type) \
 						((((uintptr_t)(addr)) & (alignof(type) - 1)) == 0U)
 #endif /* ALIGN_TYPE */
-
+#endif /* __cplusplus */ 
+  
 /*
  *  assertマクロ
  */
