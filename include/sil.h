@@ -118,7 +118,7 @@ Inline void
 sil_wrb_mem(uint8_t *mem, uint8_t data)
 {
 	*((volatile uint8_t *) mem) = data;
-	SilCallWriteHook(1,(uint32)mem,(void*)&data);
+	SilCallWriteHook(1,(uintptr_t)mem,(void*)&data);
 }
 
 #endif /* UINT8_MAX */
@@ -140,7 +140,7 @@ Inline void
 sil_wrh_mem(uint16_t *mem, uint16_t data)
 {
 	*((volatile uint16_t *) mem) = data;
-	SilCallWriteHook(2,(uint32)mem,(void*)&data);
+	SilCallWriteHook(2,(uintptr_t)mem,(void*)&data);
 }
 
 #ifdef SIL_ENDIAN_BIG			/* ビッグエンディアンプロセッサ */
@@ -167,7 +167,7 @@ sil_wrh_lem(uint16_t *mem, uint16_t data)
 {
   data = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
   *((volatile uint16_t *) mem) = data;
-  SilCallWriteHook(2,(uint32)mem,&data);
+  SilCallWriteHook(2,(uintptr_t)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRH_LEM */
@@ -196,7 +196,7 @@ sil_wrh_bem(uint16_t *mem, uint16_t data)
 {
   data = TOPPERS_SIL_REV_ENDIAN_UINT16(data);
   *((volatile uint16_t *) mem) = data;
-  SilCallWriteHook(2,(uint32)mem,&data);
+  SilCallWriteHook(2,(uintptr_t)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRH_BEM */
@@ -224,7 +224,7 @@ Inline void
 sil_wrw_mem(uint32_t *mem, uint32_t data)
 {
 	*((volatile uint32_t *) mem) = data;
-	SilCallWriteHook(4,(uint32)mem,&data);
+	SilCallWriteHook(4,(uintptr_t)mem,&data);
 }
 
 #ifdef SIL_ENDIAN_BIG			/* ビッグエンディアンプロセッサ */
@@ -251,7 +251,7 @@ sil_wrw_lem(uint32_t *mem, uint32_t data)
 {
   data = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
   *((volatile uint32_t *) mem) = data;
-  SilCallWriteHook(4,(uint32)mem,&data);
+  SilCallWriteHook(4,(uintptr_t)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRW_LEM */
@@ -279,7 +279,7 @@ sil_wrw_bem(uint32_t *mem, uint32_t data)
 {
   data = TOPPERS_SIL_REV_ENDIAN_UINT32(data);
   *((volatile uint32_t *) mem) = data;
-  SilCallWriteHook(4,(uint32)mem,&data);
+  SilCallWriteHook(4,(uintptr_t)mem,&data);
 }
 
 #endif /* TOPPERS_OMIT_SIL_WRW_BEM */

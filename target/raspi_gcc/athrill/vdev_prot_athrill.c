@@ -32,7 +32,7 @@ static uint64 get_time_from_previous_sending(void)
 
 
 
-static Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, const void* data);
+static Std_ReturnType vdevProtAthrillSilCb(int size, uintptr_t addr, const void* data);
 
 static Std_ReturnType vdev_thread_do_init(MpthrIdType id);
 static Std_ReturnType vdev_thread_do_proc(MpthrIdType id);
@@ -90,7 +90,7 @@ int vdevProtAthrillInit(const VdevIfComMethod *com)
 }
 
 /* IOメモリへの書き込み */
-Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, const void* data)
+Std_ReturnType vdevProtAthrillSilCb(int size, uintptr_t addr, const void* data)
 {
   if ( size != 1 ) return STD_E_OK;
 
@@ -108,7 +108,7 @@ Std_ReturnType vdevProtAthrillSilCb(int size, uint32 addr, const void* data)
     memcpy(&vdev_control.comm.write_data.buffer[VDEV_TX_SIM_TIME(VDEV_SIM_INX_YOU)], (void*)&vdev_control.vdev_sim_time[VDEV_SIM_INX_YOU], 8U);
     //printf("my_time=%llu sim_time=%llu\n", my_time,vdev_control.vdev_sim_time[VDEV_SIM_INX_YOU]);
     //fflush(stdout);
-    err = cur_com->send(&vdev_control.comm.write_data.buffer, vdev_control.comm.write_data.len);
+    err = cur_com->send(vdev_control.comm.write_data.buffer, vdev_control.comm.write_data.len);
 
     // Clear reset area
     if ( reset_area_off && reset_area_size ) {
@@ -182,7 +182,7 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 	uint64 curr_stime;
 
 	while (1) {
-	  err = cur_com->receive(&vdev_control.comm.read_data.buffer,sizeof(vdev_control.comm.read_data.buffer));
+	  err = cur_com->receive(vdev_control.comm.read_data.buffer,sizeof(vdev_control.comm.read_data.buffer));
 		
 		if (err != STD_E_OK) {
 			continue;

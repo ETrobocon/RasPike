@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: TECS2CBridgePlugin.rb 2068 2014-06-21 07:04:08Z okuma-top $
+#   $Id: TECS2CBridgePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
 #== TECS => C 呼び出しプラグイン

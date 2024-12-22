@@ -2,7 +2,7 @@
 #
 #  mruby => TECS bridge
 #  
-#   Copyright (C) 2008-2015 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -33,7 +33,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: MrubyBridgePlugin.rb 2638 2017-05-29 14:05:52Z okuma-top $
+#   $Id: MrubyBridgePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #
 
 #== MrubyBridgePlugin クラス

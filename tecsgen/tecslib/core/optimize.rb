@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: optimize.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id: optimize.rb 2831 2018-03-18 06:16:30Z okuma-top $
 #++
 
 =begin
@@ -92,10 +92,12 @@ class Celltype
 
   ID_BASE = 1               # reset_optimize でリセットする
   @@ID_BASE = ID_BASE
+  @@domain_class_roots = {}   # { region => celltype }
 
   def set_cell_id_and_domain
     set_cell_id
     set_domain
+    set_domain_class
   end
 
   #=== 各セルに ID （整数値）を割付ける
@@ -135,6 +137,7 @@ class Celltype
     # ID 指定されているセルに id 番号を与える
     id_specified_cells.each{ |c|
       id = c.get_specified_id
+      dbgPrint "id_specified_cells celltype=#{@name} cell=#{c.get_name} id=#{id} n_cell=#{@n_cell_gen}\n"
       if id > 0 then
         if id >= @n_cell_gen then
           cdl_error( "S3001 $1: id too large $2 (max=$3)", c.get_name, id, @n_cell_gen )
@@ -177,6 +180,7 @@ class Celltype
   end
 
   def set_domain
+    domain_cells = {}
     @cell_list.each{ |c|
       if c.is_generate? then
         dr = c.get_region.get_domain_root
@@ -190,17 +194,35 @@ class Celltype
         else
           @domain_roots[ dn ] = [ dr ]
         end
+        if domain_cells[ dr ]  then
+          domain_cells[ dr ] << c
+        else
+          domain_cells[ dr ] = [ c ]
+        end
       end
     }
 
     @domain_roots.each{ |dn, drs|
       drs.uniq!
-      if ! $debug then
-        dbgPrint "domains celltype:#{@name} domain=#{dn} "
+      if $verbose && dn then
+        # print "[domain] celltype=#{@name} domainType=#{dn} domainRootRegions={"
+        delim = ""
         drs.each{ |r|
-          dbgPrint " region=#{r.get_name}"
+          print delim, r.get_name
+          delim = ", "
         }
-        dbgPrint "\n"
+        print "}\n"
+        drs.each{ |r|
+          # unjoin_plugin 後に get_kind すると Ruby 例外が発生するため、get_kind を外してある
+          # print "[domain] celltype=#{@name} domainRootRegion=#{r.get_name} domainType=#{dn} domainKind=#{r.get_domain_root.get_domain_type.get_kind} domainCells={"
+          print "[domain] celltype=#{@name} domainRootRegion=#{r.get_name} domainType=#{dn}("
+          delim = ""
+          domain_cells[r].each{ |c|
+            print delim, c.get_name
+            delim = ", "
+          }
+          print "}\n"
+        }
       end
     }
     if @domain_roots.length > 1 then
@@ -211,13 +233,86 @@ class Celltype
     @domain_roots.each{ |dn, regions|
       # domain_type は一つのノードに一つしかないので、一つの要素を無条件で取り出す
       if regions.length > 1 then
-        cdl_info( "I9999 celltype:#{@name} has cells in multi domain.\n" )
-        if @idx_is_id == false then
-          cdl_info( "I9999 celltype:#{@name} forcely set idx_is_id\n" )
+        if $verbose then
+          cdl_info( "I9999 celltype '$1' has cells in multi-domain.\n", @name )
         end
-        @idx_is_id_act = true
+        # if @idx_is_id == false then
+        #   cdl_info( "I9999 celltype '$1' forcely set idx_is_id\n", @name )
+        # end
+        @b_need_ptab = true
+        # @idx_is_id_act = true
       end
     }
+  end
+
+  #Celltype# @domain_class_roots を設定
+  def set_domain_class
+    @domain_class_roots = {}
+    @cell_list.each{ |c|
+      if c.is_generate? then
+        dr = c.get_region.get_domain_root
+        cr = c.get_region.get_class_root
+
+        # set @domain_class_roots
+        if @domain_class_roots[ dr ] == nil then
+          @domain_class_roots[ dr ] = {}
+        end
+        if @domain_class_roots[ dr ][ cr ] then
+          @domain_class_roots[ dr ][ cr ] << c
+        else
+          @domain_class_roots[ dr ][ cr ] = [ c ]
+        end
+
+        # set @domain_class_roots2
+        if dr.is_sub_region_of? cr then
+          sub_region = dr
+        else
+          sub_region = cr
+        end
+        if @domain_class_roots2[ sub_region ] then
+          @domain_class_roots2[ sub_region ] << c
+        else
+          @domain_class_roots2[ sub_region ] = [ c ]
+        end
+
+        # set @@domain_class_roots
+        if @@domain_class_roots[ sub_region ] then
+          @@domain_class_roots[ sub_region ] << self
+        else
+          @@domain_class_roots[ sub_region ] = [ self ]
+        end
+      end
+    }
+
+    # domain_type は一つのノードに一つしかないので、一つの要素を無条件で取り出す
+    if @domain_class_roots2.length > 1 then
+      @b_need_ptab = true
+      nr = @domain_class_roots2.keys[0].get_link_root
+      if nr.get_domain_type then
+        if nr.get_domain_type.get_kind != :OutOfDomain then
+          # link root が OutOfDomain でない場合エラーとする
+          # ptab を 置く場所に使われるため（mikan 本来なら OutOfDoamin のファイルに置けばよい)
+          cdl_error( "S9999 region '$1' is node/link root and not out of domain ($2). This is limitation in current version", nr.get_name, nr.get_domain_type.get_kind.to_s )
+        end
+      end
+      # node root
+      if @@domain_class_roots[ nr ] == nil then
+        @@domain_class_roots[ nr ] = []
+      end
+    end
+
+    if $verbose then
+      cdl_info( "I9999 celltype '$1' has cells in multi-domain.\n", @name )
+      @domain_class_roots2.each{ |sub_region, cell_list |
+        delim = ""
+        print "celltype=#{@name} subRegion=#{sub_region.get_name} cells={"
+        cell_list.each{ |c|
+          print "#{delim} #{c.get_name}"
+          delim = ","
+        }
+        print " }\n"
+      }
+    end
   end
 
   def optimize
@@ -227,6 +322,14 @@ class Celltype
       print "=== optimizing celltype #{get_namespace_path.to_s} ===\n"
     end
 
+    optimize_call
+    if $unopt_entry == false then
+      optimize_entry
+    end
+  end
+
+  #=== Celltype#呼び口最適化
+  def optimize_call
     @port.each{ |port|
       next if port.get_port_type != :CALL
       if port.is_omit? then
@@ -360,7 +463,11 @@ class Celltype
       # debug
       dbgPrint "#{port.get_name} : # of cells : #{port_cells.length}  # of ports : #{port_ports.length}\n"
     }
+  end
 
+  #=== Celltype#受け口最適化
+  # optimize_entry は、呼び口最適化の結果を使用している
+  def optimize_entry
     # 受け口最適化の設定
     @port.each{ |port|
       next if port.get_port_type != :CALL
@@ -414,6 +521,8 @@ class Celltype
     }
     @included_header = {}
     @domain_roots = {}
+    @domain_class_roots = {}
+    @domain_class_roots2 = {}
   end
 
   #Celltype# ヘッダは include されているか

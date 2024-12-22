@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -537,7 +537,7 @@ class TECSMsg
 @@error_message[ :"S1106" ] = "$1: cannot specify array subscript number. use \'[]\'"
 
 # S1107 to export port, use \'cCall => composite.cCall\'"
-@@error_message[ :"S1107" ] = "to export port, use \'cCall => composite.cCall\'"
+@@error_message[ :"S1107" ] = "to export port '$1', use \'cCall => composite.cCall\'"
 
 # S1108 $1: rhs not \'Cell.ePort\' form"
 @@error_message[ :"S1108" ] = "$1: rhs not \'Cell.ePort\' form"
@@ -654,10 +654,10 @@ class TECSMsg
 @@error_message[ :"S1145" ] = "$1: temporary C source: writing error"
 
 # S1146 $1: error occured while CPP"
-@@error_message[ :"S1146" ] = "$1: error occured while CPP"
+@@error_message[ :"S1146" ] = "$1: error occured while CPP(C-PreProcesor), please check C-compiler path or command line options"
 
 # S1147 $1: popen for CPP failed"
-@@error_message[ :"S1147" ] = "$1: popen for CPP failed"
+@@error_message[ :"S1147" ] = "$1: popen for CPP(C-PreProcesor) failed, please check C-compiler path or command line options"
 
 # S1148 $1 not found in search path"
 @@error_message[ :"S1148" ] = "$1 not found in search path"
@@ -799,7 +799,7 @@ class TECSMsg
 @@error_message[ :"S2015" ] = "'$1' must be const for \'in\' parameter $2"
 
 # S2016 $1 can not be const for $2 parameter"
-@@error_message[ :"S2016" ] = "'$1' can not be const for $2 parameter"
+@@error_message[ :"S2016" ] = "'$1' can not be const for $2 parameter. This error can be eliminated by specifying [deviate] to signature"
 
 # S2017 size_is argument is not integer type"
 @@error_message[ :"S2017" ] = "size_is argument is not integer type"
@@ -1112,7 +1112,7 @@ class TECSMsg
 @@warning_message[ :"W3002" ] = "$1: this string might cause buffer over run"
 
 # W3003 $1 pointer level mismatch"
-@@warning_message[ :"W3003" ] = "$1 pointer level mismatch"
+@@warning_message[ :"W3003" ] = "$1 pointer level mismatch. This warning can be eliminated by specifying [deviate] to signature"
 
 # W3004 $1 pointer type has returned. specify deviate or stop return pointer"
 @@error_message[ :"W3004" ] = "$1 pointer type has returned. specify deviate or stop return pointer"

@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: TDR.cdl 2640 2017-06-03 11:27:12Z okuma-top $
+ *   $Id: TDR.cdl 2714 2017-12-04 06:16:48Z okuma-top $
  */
 
 import_C( "tecs_rpc.h" );
@@ -67,11 +67,6 @@ signature sTDR {  /* TECS Data Representation */
 	/* マジックコードの送受信 */
 	ER	sendSOP( [in]bool_t b_client );     /* StartOfPacket magic を送信 */
 	ER	receiveSOP( [in]bool_t b_client );  /* StartOfPacket magic を受信 */
-						 /* b_client: クライアント側なら true, サーバー側なら false */
-
-	/* マジックコードの送受信 */
-	//	ER	sendSHSOP( [in]bool_t b_client );     /* StartOfPacket magic を送信 */
-	//	ER	receiveSHSOP( [in]bool_t b_client );  /* StartOfPacket magic を受信 */
 						 /* b_client: クライアント側なら true, サーバー側なら false */
 
 	ER	sendEOP( [in]bool_t b_continue );   /* EndOfPacket magic を送信（パケットの掃きだしも行う） */
@@ -149,7 +144,7 @@ signature sTDR {  /* TECS Data Representation */
 	ER	getIntptr( [out]intptr_t *ptr );
 };
 
-// Straight Order TECS Data Representation (Straight means no endian-conversion is done)
+// Straight Byte Order TECS Data Representation (Data are always sent in native endian)
 celltype tTDR {
 	call	sChannel	cChannel;
 	[inline]

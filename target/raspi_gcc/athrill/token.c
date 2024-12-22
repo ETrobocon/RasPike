@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdio.h>
 
 bool token_strcmp(const TokenStringType *str1, const TokenStringType *str2)
 {

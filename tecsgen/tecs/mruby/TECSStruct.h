@@ -38,6 +38,10 @@
 #ifndef TECSStruct_h__
 #define TECSStruct_h__
 
+// もし mruby 関連のヘッダ取り込みでエラーが出るようなら仮の定義で TECS ジェネレータを通す
+#ifndef TECSGEN
+// #if 1
+
 #define MEMBER_GET_SET_INT( TAG, MEMBER, Type, TYPE )					\
 	static mrb_value													\
 	Struct_ ## TAG ## _ ## MEMBER ## _aget(mrb_state *mrb, mrb_value self)	\
@@ -137,5 +141,14 @@
 			|| strcmp( DATA_TYPE( value )->struct_name, "TECS::Struct" #tag ) ) \
 			mrb_raise(mrb, E_TYPE_ERROR, "not Struct or tag mismatch"); \
 	}while(0)
+
+#else  /* TECSGEN */
+
+#define MEMBER_GET_SET_INT( TAG, MEMBER, Type, TYPE )
+#define MEMBER_GET_SET_FLOAT( TAG, MEMBER )
+#define STRUCT_INIT_MEMBER( t_TAG, MEMBER )
+#define STRUCT_CLASS( t_rtsk )
+
+#endif /* TECSGEN */
 
 #endif /* TECSStruct_h__ */

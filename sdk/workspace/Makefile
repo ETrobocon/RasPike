@@ -31,7 +31,8 @@ CLEAN_FILES+=../../RasPike-ART/lib/*.a
 
 start: appdir
 	$(ADDITIONAL_PRE_APPL)
-	sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d $(DEVICE_CONFIG)
+	#sudo env LD_PRELOAD=../common/setjmp/libssetjmp.so ./asp -d $(DEVICE_CONFIG)
+	sudo env LD_PRELOAD=../common/setjmp/aarch64/libssetjmp.so ./asp -d $(DEVICE_CONFIG)
 
 startsim: appdir
 	$(ADDITIONAL_PRE_APPL)

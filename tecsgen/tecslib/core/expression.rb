@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -39,6 +39,8 @@
 
 class Expression < Node
 #  @elements   # array
+# @b_in_C:Bool : import_C 内の式
+# @b_checked:Bool : 式はチェックされている
 
   def initialize( elements, locale = nil )
     super()
@@ -47,6 +49,8 @@ class Expression < Node
     end
 
     @elements = elements
+    @b_in_C = Generator.parsing_C?
+    @b_checked = false
   end
 
   def print
@@ -91,6 +95,7 @@ class Expression < Node
 
   def eval_const( name_list, name_list2 = nil )
     val = elements_eval_const( @elements, name_list, name_list2, 0 )
+    @b_checked = true
     if val.kind_of? IntegerVal then
       return val.to_i
     elsif val.kind_of? FloatVal then
@@ -348,7 +353,6 @@ class Expression < Node
 
   MAX_NEST_LEVEL = 64    # 簡易のループ検出（参照のネストを 64 まで許可する）
   def elements_eval_const( elements, name_list, name_list2 = nil, nest = nil )
-
     case elements[0]
     when :IDENTIFIER
       nsp = elements[1]
@@ -440,11 +444,7 @@ class Expression < Node
     when :CHARACTER_LITERAL
       str =  elements[1].val.gsub(/'/, "" )
 #2.0      if str.jlength == 1
-      if $b_no_kcode then
-        len = str.length
-      else
-        len = str.jlength
-      end
+      len = str.length
       if len == 1 then
         sum = 0
         str.each_byte { |b| sum = sum * 256 + b }
@@ -489,17 +489,21 @@ class Expression < Node
       cdl_error( "E1006 cannot evaluate \'->\' operator"  )
       return nil
     when :OP_SIZEOF_EXPR
-      if Generator.parsing_C? then
-        cdl_info( "I9999 cannot evaluate \'sizeof\' operator. this might causes later error."  )
-      else
-        cdl_error( "E1007 cannot evaluate \'sizeof\' operator"  )
+      if ! @b_checked then
+        if @b_in_C then
+          cdl_info( "I9999 cannot evaluate \'sizeof\' operator. this might causes later error."  )
+        else
+          cdl_error( "E1007 cannot evaluate \'sizeof\' operator"  )
+        end
       end
       return nil
     when :OP_SIZEOF_TYPE
-      if Generator.parsing_C? then
-        cdl_info( "I9999 cannot evaluate \'sizeof\' operator. this might causes later error."  )
-      else
-        cdl_error( "E1008 cannot evaluate \'sizeof\' operator"  )
+      if ! @b_checked then
+        if @b_in_C then
+          cdl_info( "I9999 cannot evaluate \'sizeof\' operator. this might causes later error."  )
+        else
+          cdl_error( "E1008 cannot evaluate \'sizeof\' operator"  )
+        end
       end
       return nil
     when :OP_U_AMP
@@ -689,13 +693,19 @@ class Expression < Node
     case elements[0]
     when :IDENTIFIER
       nsp = elements[1]
-      if nsp.is_name_only? then
+      if nsp.is_name_only? && namedList then    #1202
         paramdecl = namedList.get_item( nsp.get_name )
       else
         paramdecl = nil
       end
       unless paramdecl then
-        cdl_error( "E1012 $1: not found in parameter list" , nsp.get_path_str )
+        if namedList then                       #1202
+          cdl_error( "E1012 $1: not found in parameter list" , nsp.get_path_str )
+        else
+          # namedList = nil: expression.rb の initializer.get_type( attribute ) から呼ばれた場合
+          # この場合、E1001 が出るので、ここでは出さない
+          dbgPrint "elements_get_type_sub: #{nsp.get_path_str} not found (namedList==nil)"
+        end
         return IntType.new(32)        # dummy result
       end
       return paramdecl.get_type

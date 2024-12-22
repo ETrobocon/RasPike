@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: messages_file_ja_JP.rb 2587 2016-07-31 13:26:28Z okuma-top $
+#   $Id: messages_file_ja_JP.rb 2852 2018-04-09 10:38:29Z okuma-top $
 #++
 
 
@@ -64,7 +64,7 @@ class TECSMsg
  * このファイルは tecsgen によりテンプレートとして自動生成されました
  * このファイルを編集して使用することが意図されていますが
  * tecsgen の再実行により上書きされてしまうため、通常
- *   gen/%s_template.c => src/%s.c
+ *   gen/%s_templ.c => src/%s.c
  * のように名前, フォルダを変更してから修正します
  */
 "
@@ -162,5 +162,7 @@ class TECSMsg
 @@comment[ :TCPF_comment ] = " * 呼び口関数 %s\n"
 @@comment[ :TEPF_comment ] = "/* 受け口関数 %s */\n"
 @@comment[ :TEFB_comment ] = "\t/* ここに処理本体を記述します %s */\n"
+@@comment[ :MCPP_comment ] = "/* CB プロトタイプ宣言 %s */\n"
+@@comment[ :MCPB_comment ] = "/* CB プロトタイプ宣言 %s */\n"
 
 end

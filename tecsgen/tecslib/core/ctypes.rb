@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: ctypes.rb 2622 2017-01-04 13:19:33Z okuma-top $
+#   $Id: ctypes.rb 2665 2017-07-24 08:59:28Z okuma-top $
 #++
 
 # CType は C_parser で定義される型を扱う CIntType, CFloatType などに include するもの
@@ -121,10 +121,19 @@ module CType
       # mikan long double
       #   TECS には long double を表現する手段がない (double80_t を定義すればよいか?)
 #      cdl_warning( "C1003 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.class, another.class, self.class )
-      cdl_warning( "W9999 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.get_type_str, another.get_type_str, self.get_type_str )
+#      cdl_warning( "W9999 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.get_type_str, another.get_type_str, self.get_type_str )
+      self.to_long      
+      return self
+    elsif self.instance_of?( CVoidType ) then
+      if another.is_const? then
+        @b_const = true
+      end
+      if another.is_volatile? then
+        @b_volatile = true
+      end
       return self
     else
-      raise "merge: unknown type"
+      raise "merge: unknown type #{self.class.name}"
     end
   end
 
@@ -146,6 +155,34 @@ class CDefinedType < DefinedType
 
   def initialize( type_name )
     super( type_name )
+    # サイズが明瞭の C 言語の型について、TECS CDL の組込み型と同等に扱う
+    case type_name
+    when :int8_t
+      @type = IntType.new( 8 )
+    when :int16_t
+      @type = IntType.new( 16 )
+    when :int32_t
+      @type = IntType.new( 32 )
+    when :int64_t
+      @type = IntType.new( 64 )
+    when :int128_t
+      @type = IntType.new( 128 )
+    when :uint8_t
+      @type = IntType.new( 8 )
+      @type.set_sign( :UNSIGNED, true )
+    when :uint16_t
+      @type = IntType.new( 16 )
+      @type.set_sign( :UNSIGNED, true )
+    when :uint32_t
+      @type = IntType.new( 32 )
+      @type.set_sign( :UNSIGNED, true )
+    when :uint64_t
+      @type = IntType.new( 64 )
+      @type.set_sign( :UNSIGNED, true )
+    when :uint128_t
+      @type = IntType.new( 128 )
+      @type.set_sign( :UNSIGNED, true )
+    end
   end
 end
 
@@ -184,6 +221,13 @@ class CFloatType < FloatType
     super
   end
 
+  def to_long
+    if @bit_size != -64 then
+      cdl_warning( "W9999 long specified for $1" , get_type_str )
+    else
+      @bit_size = -128  # @bit_size = -128 : long double
+    end
+  end
 end
 
 class CEnumType < EnumType # mikan

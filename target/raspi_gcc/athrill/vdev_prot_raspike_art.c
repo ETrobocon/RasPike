@@ -32,7 +32,7 @@ static void unlock_task(void)
 }
 
 
-static Std_ReturnType vdevProtRaspikeSilCb(unsigned int size, unsigned int addr, const void* data);
+static Std_ReturnType vdevProtRaspikeSilCb(unsigned int size, uintptr_t addr, const void* data);
 
 static Std_ReturnType vdev_thread_do_init(MpthrIdType id);
 static Std_ReturnType vdev_thread_do_proc(MpthrIdType id);
@@ -81,12 +81,12 @@ static void enable_interrupt(sigset_t *to_set)
 }
 
 /* IOメモリへの書き込み */
-Std_ReturnType vdevProtRaspikeSilCb(unsigned int size, unsigned int  addr, const void *data)
+Std_ReturnType vdevProtRaspikeSilCb(unsigned int size, uintptr_t  addr, const void *data)
 {
   if (addr != VDEV_TX_FLAG(0)) {
     // Called EV3 API. But RasPike-ART does not support it.
   
-    printf("[WARN] RasPike-ART does not support EV3 API(addr = %x)\n",addr);
+    printf("[WARN] RasPike-ART does not support EV3 API(addr = %x)\n",(void*)addr);
 
   }
   

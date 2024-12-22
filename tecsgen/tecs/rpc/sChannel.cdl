@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: sChannel.cdl 2027 2014-01-20 08:36:17Z okuma-top $
+ *   $Id: sChannel.cdl 2714 2017-12-04 06:16:48Z okuma-top $
  */
 
 signature	sServerChannelOpener {
@@ -57,3 +57,11 @@ signature	sChannel {
 	ER		reset( void );       /* チャンネルをリセット */
 };
 
+/*
+ * size に uint16_t ではなく int16_t を用いるのは、下位層が ER_INT を返す場合を想定したもの．
+ *
+ * sChannel は TECS RPC の TDR の下位層である通信チャンネルとのインタフェースである．
+ * 通信チャンネルは、高水準 I/O のように、バッファリングされることを想定する．
+ * TDR からは、int8_t, int16_t, int32_t, int64_t, (int128_t), float32_t, double64_t bool_t, char_t のような基本型(無符号を含む)が渡される。
+ * 配列や構造体の場合であっても要素ごとに渡される。
+ */

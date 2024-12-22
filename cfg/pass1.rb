@@ -167,9 +167,13 @@ def ReadSymvalTable
       next
     end
 
+#    symvalCsv = CSV.open(symvalTableFileName,
+#						{ skip_blanks: true, skip_lines: /^#/ })
+#   https://www.chihayafuru.jp/tech/index.php/archives/5460
     symvalCsv = CSV.open(symvalTableFileName,
-						{ skip_blanks: true, skip_lines: /^#/ })
-    symvalCsv.each do |record|
+						skip_blanks: true, skip_lines: /^#/ )
+
+      symvalCsv.each do |record|
       # 変数名
       if record[0].nil?
         error_exit("invalid variable name in " \

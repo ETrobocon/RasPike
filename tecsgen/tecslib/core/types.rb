@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #
-#   Copyright (C) 2008-2015 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--  
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: types.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id: types.rb 2665 2017-07-24 08:59:28Z okuma-top $
 #++
 
 #= HasType: @type を内部に持つ型のためのモジュール
@@ -488,6 +488,7 @@ class IntType < Type
   #from_type:: Symbol:  :IntType, :FloatType  IntType の場合はビット数でクリップ、FloatType の場合は最大値でクリップ
   def check_and_clip( in_val, from_type = :IntType )
     bit_size = get_bit_size
+
     if bit_size == -1 then
       bit_size = 8
     end
@@ -502,6 +503,7 @@ class IntType < Type
     elsif get_min && val < get_min then
       if from_type == :IntType then
         rval = ((1 << bit_size)-1) & val
+        dbgPrint "check_and_clip: negative=#{in_val} to unsigned=#{rval}  #{(1 << bit_size)-1} bit_size=#{bit_size}\n"
       else
         rval = get_min
       end
@@ -622,13 +624,13 @@ class IntType < Type
 
   def show_tree( indent )
     indent.times { print "  " }
-    puts "IntType bit_size=#{@bit_size} sign=#{@sign} const=#{@b_const} volatile=#{@b_volatile} #{locale_str}"
+    puts "#{self.class.name} bit_size=#{@bit_size} sign=#{@sign} const=#{@b_const} volatile=#{@b_volatile} #{locale_str}"
     super( indent + 1 )
   end
 end
 
 class FloatType < Type
-#  @bit_size::         32, 64, (80), -32, -64
+#  @bit_size::         32, 64, (80), -32, -64, -128
 
   def initialize( bit_size )
     super()
@@ -683,6 +685,8 @@ class FloatType < Type
       str = "#{str}float"
     when -64
       str = "#{str}double"
+    when -128
+      str = "#{str}long double"
     end
     return str
   end
@@ -849,6 +853,8 @@ class StructType < Type
         end
         i += 1
       }
+    elsif initializer.instance_of?( C_EXP ) then
+      # C_EXP は 無常件に OK
     else
       cdl_error2( locale, "T1024 $1: unsuitable initializer for struct" , ident )
     end
@@ -953,7 +959,11 @@ class StructType < Type
       return st.get_members_decl
     end
 
-    return nil
+    # 不完全型の場合。
+    # import_C の中では構造体のメンバー定義がないものもありうる.
+    # TECS CDL では、構造体メンバーを先に定義する必要があり、ここへは来ないはず。
+    # return nil
+    return NamedList.new( nil, "in struct #{@tag}" )
   end
 
   def has_pointer?
@@ -1410,7 +1420,7 @@ class PtrType < Type
           i += 1
         }
       elsif val.instance_of?( C_EXP ) then
-
+        # tecsgen V1.8.RC11 から C_EXP も可とする
       else
         cdl_error2( locale, "T1035 $1: unsuitable initializer for pointer" , ident )
       end
@@ -1557,20 +1567,14 @@ end
 #==  DescriptorType クラス
 # 動的結合で渡すデスクリプタ型
 class DescriptorType < Type
-# @sinagure_nsp::NamespacePath
+  # @sinagure_nsp::NamespacePath
+
+  @@descriptors = {}
 
   def initialize( signature_nsp )
-    # p "Desc #{signature_nsp.to_s}"
-    obj = Namespace.find signature_nsp
-    if ! obj.kind_of? Signature then
-      cdl_error( "T9999 '$1': not signature or not found", signature_nsp.to_s )
-      @signature_nsp = signature_nsp
-    else
-      if obj.has_descriptor? then
-       # cdl_error( "T9999 '$1': has Descriptor in function parameter", signature_nsp.to_s )
-      end
-      @signature_nsp = obj.get_namespace_path
-    end
+    @signature_nsp = signature_nsp
+    # check_signature ##
+    @@descriptors[ self ] = false
   end
 
   def get_type_str
@@ -1594,6 +1598,28 @@ class DescriptorType < Type
       # 引数は初期化できない
     else
       cdl_error2( locale, "T9999 Descriptor cannot be used for $1", kind)
+    end
+  end
+
+  def self.check_signature
+    @@descriptors.each{ |desc, val|
+      if val != true then
+        desc.check_signature
+        @@descriptors[ desc ] = true
+      end
+    }
+  end
+  
+  def check_signature
+    # p "Desc #{@signature_nsp.to_s}"
+    obj = Namespace.find @signature_nsp
+    if ! obj.kind_of? Signature then
+      cdl_error( "T9999 '$1': not signature or not found", @signature_nsp.to_s )
+    else
+      if obj.has_descriptor? then
+       # cdl_error( "T9999 '$1': has Descriptor in function parameter", @signature_nsp.to_s )
+      end
+      # @signature_nsp = obj.get_namespace_path
     end
   end
 

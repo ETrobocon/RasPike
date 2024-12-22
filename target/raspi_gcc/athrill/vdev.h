@@ -2,11 +2,12 @@
 #define _VDEV_H_
 
 #include "std_types.h"
+#include <stdint.h>
 
 extern unsigned char athrill_vdev_mem[];
 
 //#define VDEV_BASE			0x090F0000
-#define VDEV_BASE 		((unsigned int)(athrill_vdev_mem))
+#define VDEV_BASE 		((uintptr_t)(athrill_vdev_mem))
 
 
 #define VDEV_RX_DATA_BASE	VDEV_BASE

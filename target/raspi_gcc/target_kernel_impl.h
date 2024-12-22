@@ -76,6 +76,20 @@
 /*
  *  エラーチェック方法の指定
  */
+#ifdef __aarch64__
+#define CHECK_STKSZ_ALIGN	16	/* スタックサイズのアライン単位 */
+#define CHECK_INTPTR_ALIGN	8	/* intptr_t型の変数のアライン単位 */
+#define CHECK_INTPTR_NONNULL	/* intptr_t型の変数の非NULLチェック */
+#define CHECK_FUNC_ALIGN	4	/* 関数のアライン単位 */
+#define CHECK_FUNC_NONNULL		/* 関数の非NULLチェック */
+#define CHECK_STACK_ALIGN	16	/* スタック領域のアライン単位 */
+#define CHECK_STACK_NONNULL		/* スタック領域の非NULLチェック */
+#define CHECK_MPF_ALIGN		16	/* 固定長メモリプール領域のアライン単位 */
+#define CHECK_MPF_NONNULL		/* 固定長メモリプール領域の非NULLチェック */
+#define CHECK_MB_ALIGN		16	/* 管理領域のアライン単位 */
+
+#else
+#error
 #define CHECK_STKSZ_ALIGN	16	/* スタックサイズのアライン単位 */
 #define CHECK_INTPTR_ALIGN	4	/* intptr_t型の変数のアライン単位 */
 #define CHECK_INTPTR_NONNULL	/* intptr_t型の変数の非NULLチェック */
@@ -86,7 +100,7 @@
 #define CHECK_MPF_ALIGN		4	/* 固定長メモリプール領域のアライン単位 */
 #define CHECK_MPF_NONNULL		/* 固定長メモリプール領域の非NULLチェック */
 #define CHECK_MB_ALIGN		4	/* 管理領域のアライン単位 */
-
+#endif
 /*
  *  トレースログに関する設定
  */
@@ -145,6 +159,16 @@
 #define TASK_STACK_MERGIN               8U            /* #2 */
 #define DEFAULT_ISTKSZ                  SIGSTKSZ        /* シグナルスタックのサイズ */
 
+#elif defined(__aarch64__)
+#define JMPBUF_PC                               11                       /* jmp_buf中でのPCの位置 */
+#define JMPBUF_SP                               13                       /* jmp_buf中でのSPの位置 */
+#define TASK_STACK_MERGIN               16U            /* #2 */
+#define DEFAULT_ISTKSZ                  20480        /* シグナルスタックのサイズ */
+/* 64bitではタスクのスタックからdispatchされた場合にスタックが不足するので、強制的に加算する
+ kernel.hの定義を上書きする*/
+#define TOPPERS_COUNT_SZ(sz, unit)	((((sz)+DEFAULT_ISTKSZ) + (unit) - 1) / (unit))
+#define TOPPERS_ROUND_SZ(sz, unit)	((((sz)+DEFAULT_ISTKSZ) + (unit) - 1) & ~((unit) - 1))
+
 #else
 #error architecture not supported
 #endif
@@ -161,6 +185,9 @@
  */
 typedef struct task_context_block {
 	jmp_buf		env;			/* コンテキスト情報 */
+#ifdef __aarch64__
+  void *dummy;
+#endif  
 } TSKCTXB;
 
 /*

@@ -61,7 +61,7 @@ static RaspikeHeader common_header;
 static const VdevIfComMethod *cur_com = 0;
 static MpthrIdType vdev_thrid;
 
-static Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void* data);
+static Std_ReturnType vdevProtRaspikeSilCb(int size, uintptr_t addr, void* data);
 
 static Std_ReturnType vdev_thread_do_init(MpthrIdType id);
 static Std_ReturnType vdev_thread_do_proc(MpthrIdType id);
@@ -237,7 +237,7 @@ static RasPikeCommand send_order[] = {
 #define numof(table) (sizeof(table)/sizeof(table[0]))
 
 /* IOメモリへの書き込み */
-Std_ReturnType vdevProtRaspikeSilCb(int size, uint32 addr, void *data)
+Std_ReturnType vdevProtRaspikeSilCb(int size, uintptr_t addr, void *data)
 {
   int len;
   static int is_first_call = 0;
@@ -421,7 +421,7 @@ static Std_ReturnType vdev_thread_do_proc(MpthrIdType id)
 
 	  if ( type == 0 ) {
 	    /* status */
-	    char *p = VDEV_RX_DATA_BASE + cmd_id*4;
+	    char *p = (char*)(VDEV_RX_DATA_BASE + cmd_id*4);
 
 	    *(unsigned int*)p = *(unsigned int*)&val;
 	    //	    printf("OFFSET=%d value=%d\n",cmd_id*4,val);

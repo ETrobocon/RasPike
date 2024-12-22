@@ -8,6 +8,7 @@
 
 #include "option.h"
 #include <stdio.h>
+#include <string.h>
 #include "token.h"
 #include "file.h"
 #include "std_errno.h"

@@ -1,7 +1,7 @@
 default:exec
 
 exec:test
-	env LD_PRELOAD=../libssetjmp.so ./test
+	env LD_PRELOAD=../$(ARC)/libssetjmp.so ./test
 
 exec_static:test_static
 	./test_static

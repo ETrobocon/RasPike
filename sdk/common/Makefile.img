@@ -63,7 +63,7 @@ TARGET = @(TARGET)
 SRCLANG = @(SRCLANG)
 ifeq ($(SRCLANG),c)
 	LIBS = -lm -lc -lgcc
-	COPTS += -std=c99
+	COPTS += -std=c99 -fno-omit-frame-pointer -O1 -g
 	COPTS += -DSYSLOG_IMPLEMENT_AS_PRINTF -DMAKE_RASPIKE
 endif
 ifeq ($(SRCLANG),c++)
@@ -127,6 +127,8 @@ DEVTOOLDIR = @(DEVTOOLDIR)
 #
 CFG = @(CFG)
 TECSGEN = @(TECSGEN)
+
+
 
 #
 #  オブジェクトファイル名の定義

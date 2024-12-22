@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: MultiPlugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id: MultiPlugin.rb 3263 2022-12-30 11:45:37Z okuma-top $
 #++
 
 #== MultiPlugin クラス
@@ -42,15 +42,19 @@ class MultiPlugin < Node
   def self.get_plugin superClass
     # case when (つまりは ===) では、期待したように一致しない模様
     if superClass == SignaturePlugin then
+      require_tecsgen_lib "tecslib/plugin/SignaturePlugin.rb"
       return SignaturePlugin
     elsif superClass == CelltypePlugin
+      require_tecsgen_lib "tecslib/plugin/CelltypePlugin.rb"
       return CelltypePlugin
     elsif superClass == CellPlugin
+      require_tecsgen_lib "tecslib/plugin/CellPlugin.rb"
       return CellPlugin
     elsif superClass == ThroughPlugin
+      require_tecsgen_lib "tecslib/plugin/ThroughPlugin.rb"
       return ThroughPlugin
     elsif superClass == DomainPlugin
-      return DomainPlugin
+      return nil
     else
       return nil
     end

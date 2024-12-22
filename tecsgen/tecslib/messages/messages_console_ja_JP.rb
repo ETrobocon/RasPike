@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -537,7 +537,7 @@ class TECSMsg
 @@error_message[ :"S1106" ] = "$1: 配列添数の数値を指定することが出来ません．\'[]\' をお使いください．"
 
 # S1107 to export port, use \'cCall => composite.cCall\'"
-@@error_message[ :"S1107" ] = "口(port)を外部に公開するため, \'cCall => composite.cCall\' をお使いください．"
+@@error_message[ :"S1107" ] = "'$1' (port)を外部に公開するため, \'cCall => composite.cCall\' をお使いください．"
 
 # S1108 $1: rhs not \'Cell.ePort\' form"
 @@error_message[ :"S1108" ] = "$1: 右辺が \'Cell.ePort\' の形式ではありません．"
@@ -654,10 +654,10 @@ class TECSMsg
 @@error_message[ :"S1145" ] = "$1: 一時的な C ソース: 書込みエラーです．"
 
 # S1146 $1: error occured while CPP"
-@@error_message[ :"S1146" ] = "$1: CPP 実行中にエラーが発生しました．"
+@@error_message[ :"S1146" ] = "$1: CPP(C-PreProcessor) 実行中にエラーが発生しました．Cコンパイラのパスまたはコマンドラインオプションをチェックしてください"
 
 # S1147 $1: popen for CPP failed"
-@@error_message[ :"S1147" ] = "$1: CPPに対する popen が失敗しました．"
+@@error_message[ :"S1147" ] = "$1: CPP(C-PreProcessor) に対する popen が失敗しました．Cコンパイラのパスまたはコマンドラインオプションをチェックしてください"
 
 # S1148 $1 not found in search path"
 @@error_message[ :"S1148" ] = "$1 が検索パスの中に見つかりません．"
@@ -799,7 +799,7 @@ class TECSMsg
 @@error_message[ :"S2015" ] = "'$1' は \'in\' パラメータ $2 に対して定数である必要があります．"
 
 # S2016 $1 can not be const for $2 parameter"
-@@error_message[ :"S2016" ] = "'$1' は $2 パラメータに対して定数指定できません． "
+@@error_message[ :"S2016" ] = "'$1' は $2 パラメータに対して定数指定できません． このエラーは signature に [deviate] を指定することで抑制できます"
 
 # S2017 size_is argument is not integer type"
 @@error_message[ :"S2017" ] = "size_is 引数が整数型ではありません．"
@@ -1112,7 +1112,7 @@ class TECSMsg
 @@warning_message[ :"W3002" ] = "$1: この文字列はバッファーオーバーランを引き起こすかもしれません．"
 
 # W3003 $1 pointer level mismatch"
-@@warning_message[ :"W3003" ] = "$1 ポインターレベルの不整合です．"
+@@warning_message[ :"W3003" ] = "$1 ポインターレベルの不整合です．このエラーは signature に [deviate] を指定することで抑制できます"
 
 # W3004 $1 pointer type has returned. specify deviate or stop return pointer"
 @@error_message[ :"W3004" ] = "$1 ポインタ型が返されました。deviate を指定するかポインタを返すのを止めてください"

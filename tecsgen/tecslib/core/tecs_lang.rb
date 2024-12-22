@@ -66,14 +66,8 @@ class TECS_LANG
     lang =~ /([^\.@]*)(\.([^@]*))?(@(.*))?/
 
     lang_terri = $1.to_sym if $1 != nil && $1 != ""
-    # set_kcode_binary により、C.UTF-8 のみを特別扱いする必要がなくなった
-    # if lang_terri == :C then    # LANG=C.* は、すべて 1 byte 文字コードとして扱う
-    #  codeset = nil
-    #  modifier = nil
-    # else
-      codeset = $3.to_sym if $3 != nil && $3 != ""
-      modifier = $5.to_sym if $5 != nil && $5 != ""
-    # end
+    codeset = $3.to_sym if $3 != nil && $3 != ""
+    modifier = $5.to_sym if $5 != nil && $5 != ""
     [ lang_terri, codeset, modifier ]
   end
 
@@ -201,63 +195,31 @@ class TECS_LANG
     # 文字コードの設定
     case $CHARSET_FILE           # string: "EUC" | "SJIS" | "NONE" | "UTF8"
     when :eucJP
-      $KCODE_CDL = "EUC"
       $KCONV_CDL = Kconv::EUC
       $Ruby19_File_Encode = "ASCII-8BIT"
     when :sjis
-      $KCODE_CDL = "SJIS"
       $KCONV_CDL = Kconv::SJIS
       $Ruby19_File_Encode = "Shift_JIS"
     when :utf8
-      $KCODE_CDL = "UTF8"
       $KCONV_CDL = Kconv::UTF8
       $Ruby19_File_Encode = "ASCII-8BIT"
     else
-      $KCODE_CDL = "BINARY"
       $KCONV_CDL = Kconv::BINARY
       $Ruby19_File_Encode = "ASCII-8BIT"
     end
 
     case $CHARSET_CONSOLE
     when :eucJP
-      $KCODE_CONSOLE = "EUC"
       $KCONV_CONSOLE = Kconv::EUC
     when :sjis
-      $KCODE_CONSOLE = "SJIS"
       $KCONV_CONSOLE = Kconv::SJIS
     when :utf8
-      $KCODE_CONSOLE = "UTF8"
       $KCONV_CONSOLE = Kconv::UTF8
     else
-      $KCODE_CONSOLE = "BINARY"
       $KCONV_CONSOLE = Kconv::BINARY
     end
 
-    $KCODE_TECSGEN = "UTF8"      # string: "EUC"  このファイルの文字コード（オプションではなく定数）
     $KCONV_TECSGEN = Kconv::UTF8 # const: 
-    set_kcode $KCODE_TECSGEN     # このファイルの文字コードを設定
-  end
-
-  #=== 一時的に KCODE を BINARY に変更する
-  # EUC を UTF8 で読み込んだ場合に文字区切りを誤る問題の対応
-  # コメントの読み飛ばしを誤る点が問題
-  # ただし、SJIS の場合は、エスケープ文字の問題があるため、変更しない
-  def self.set_kcode_binary
-
-    #2.0
-    if $b_no_kcode then
-      return
-    end
-
-    $KCODE_BACK = $KCODE
-    if $KCODE != "SJIS" then
-      set_kcode "BINARY"
-    end
-  end
-
-  #=== 一時的なあ KCODE の変更を元に戻す
-  def self.reset_kcode
-    set_kcode $KCODE_BACK
   end
 
   #####
@@ -315,7 +277,6 @@ class TECS_LANG
   self.set_kconv_var 
 
   dbgPrint "LANG_FILE=#{$LANG_FILE}.#{$CHARSET_FILE}, LANG_CONSOLE=#{$LANG_CONSOLE}.#{$CHARSET_CONSOLE}\n"
-  dbgPrint "KCODE_CDL=#{$KCODE_CDL}(#{$KCONV_CDL}) KCODE_CONSOLE=#{$KCODE_CONSOLE}(#{$KCONV_CONSOLE})\n"
   dbgPrint "Ruby19_File_Encode=#{$Ruby19_File_Encode}\n"
 
   #=== 単体テスト実行
@@ -335,14 +296,14 @@ end
 # 文字コードを変換する
 class Console
   def self.print str
-    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
+    if $KCONV_CONSOLE == Kconv::BINARY then 
       STDOUT.print str
     else
       STDOUT.print str.kconv( $KCONV_CONSOLE, $KCONV_TECSGEN )
     end
   end
   def self.puts str
-    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
+    if $KCONV_CONSOLE == Kconv::BINARY then 
       STDOUT.puts str
     else
       STDOUT.puts str.kconv( $KCONV_CONSOLE, $KCONV_TECSGEN )

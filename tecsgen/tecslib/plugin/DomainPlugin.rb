@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: DomainPlugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id: DomainPlugin.rb 3159 2020-07-05 10:25:24Z okuma-top $
 #++
 
 #== ドメインプラグインの親クラス
@@ -45,6 +45,7 @@ class DomainPlugin < Plugin
   #domain_type_name::Symbol : domain 指定子の第一引数
   #option::String : domain 指定子の第二引数
   def initialize( region, domain_type_name, option )
+    super()
   end
 
   #== 結合 join にプラグインを挿入する
@@ -75,5 +76,16 @@ class DomainPlugin < Plugin
   #== require が結合可能か？
   def joinable?(current_region, next_region, through_type )
     return false
+  end
+
+  #== ドメイン種別を返す
+  #return::Symbol :kernel, :user, :OutOfDomain
+  def get_kind
+    :kernel
+  end
+
+  #== factory 生成
+  # DomainPlugin の factory は特定のファイルへの出力が想定されていない
+  def gen_factory node_root
   end
 end

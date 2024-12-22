@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: tecsgen.rb 2638 2017-05-29 14:05:52Z okuma-top $
+#   $Id: tecsgen.rb 2665 2017-07-24 08:59:28Z okuma-top $
 #++
 
 
@@ -249,6 +249,10 @@ class TECSGEN
     dbgPrint( "## Creating reverse join \n")
     Cell.create_reverse_join
 
+    DescriptorType.check_signature
+    Signature.set_descriptor_list
+    Celltype.check_dynamic_join
+
     #0 set_definition_join は2回呼び出される（1回目）
     dbgPrint( "## Checking all join\n")
     @root_namespace.set_definition_join
@@ -261,32 +265,15 @@ class TECSGEN
     if ARGV.length > 0 then
       dbgPrint( "## Generating Post Code\n")
       # プラグインのポストコードの出力と import
-      tmp_file_name = "#{$gen}/tmp_plugin_post_code.cdl"
-      file = nil
-      begin
-        file = CFile.open( tmp_file_name, "w" )
-      rescue
-        Generator.error( "G9999 fail to create #{tmp_file_name}" )
-      end
-
-      if file then
-        # through プラグインのポストコード生成
-        PluginModule.gen_plugin_post_code file
-
-        begin
-          file.close
-        rescue
-          Generator.error( "G9999 fail to close #{tmp_file_name}" )
-        end
-        dbgPrint( "## Import Post Code\n")
-        Import.new( "#{tmp_file_name}" )
-      end
+      PluginModule.gen_plugin_post_code
     end
 
     ####  意味解析１ (post コード) ####
     dbgPrint( "## Creating reverse join (for post code) \n")
     Cell.create_reverse_join
 
+    ################  ここで　セルタイプ、シグニチャのチェックが行われないのは、よいのか？  ################
+  
     # Join の定義の設定とチェック
     #0 # 前方参照対応
     #0 set_definition_join は2回呼び出される（2回目）  post_code で生成された
@@ -449,6 +436,70 @@ class TECSGEN
     open( "#{$gen_base}/tecsgen.timestamp", "w" ){|io|}
   end # finalize
 
+  def dump_tecsgen_rbdmp
+    dbgPrint "dump_tecsgen_rbdmp 0:\n"
+    #### unjoin_plugin 後に行う必要があるため、コード生成後にダンプを行う
+    #### Region link root ごとにオプティマイズしてダンプ ####
+    Namespace.get_root.unjoin_plugin
+    Namespace.get_root.find_plugin 0, []
+
+    Region.get_link_roots.each { |region|
+      dbgPrint "dump_tecsgen_rbdmp 1: Region.path_str: #{region.get_namespace_path.get_path_str}\n"
+
+      n_cells = region.get_n_cells
+
+      if $region_list.length > 0 then
+        if $region_list[ region.get_namespace_path.get_path_str ] == false then
+          $region_list[ region.get_namespace_path.get_path_str ] = true
+        else
+          next
+        end
+      end
+
+      dbgPrint "dump_tecsgen_rbdmp 2: Region.path_str: #{region.get_namespace_path.get_path_str}\n"
+      # セルが一つもなければ生成しない
+      # セルの生成がない場合
+      if region.get_n_cells == 0 then
+        # if $region_list.length > 0 then
+        #   Generator.warning( "W9999 $1: specified to generate but has no cell", region.get_name )
+        # end
+        if region != @root_namespace then
+          next
+        end
+      end
+
+      dbgPrint "dump_tecsgen_rbdmp 3: Region.path_str: #{region.get_namespace_path.get_path_str}\n"
+      $generating_region = region
+      if Region.get_link_roots.length > 1 then
+        if region.get_name == "::" then
+          $gen = $gen_base
+        else
+          $gen = $gen_base + "/" + region.get_global_name.to_s
+        end
+      else
+        $gen = $gen_base
+      end
+
+      dbgPrint "dump_tecsgen_rbdmp 4: Region.path_str: #{region.get_namespace_path.get_path_str}\n"
+      dbgPrint( "## Unset optimize variables\n")
+      @root_namespace.reset_optimize   # 最適化をリセットする
+
+      #  if Generator.get_n_error == 0 then
+      #   # エラーが発生していたら、ここへは来ない
+         dbgPrint( "## Set cell id\n")
+        @root_namespace.set_cell_id_and_domain      # セルの ID とドメイン情報を設定（linkunit 毎に0からつける）
+
+        # エラーが発生していたら、最適化は実施しない
+        if ! $unopt then
+          dbgPrint( "## Optimizing: Link Region=#{@root_namespace.get_name}\n")
+          @root_namespace.optimize
+        end
+      # end
+      dbgPrint "dump_tecsgen_rbdmp final: Region.path_str: #{region.get_namespace_path.get_path_str}\n"
+      File.write( "#{$gen}/tecsgen.rbdmp", Marshal.dump(Namespace.get_root) )
+    }
+  end
+  
   def self.post_coded?
     @@b_post_coded
   end

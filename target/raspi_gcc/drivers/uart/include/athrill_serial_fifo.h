@@ -21,7 +21,7 @@
 /*
  * Please configure SERIAL_FIFO_BASE_ADDR for your environment.
  */
-#define SERIAL_FIFO_BASE_ADDR						0x03FF7000
+#define SERIAL_FIFO_BASE_ADDR						(uintptr_t)0x03FF7000
 
 #define SERIAL_FIFO_WRITE_STATUS_OFF				(SERIAL_FIFO_MAX_CHANNEL_NUM * 0U)
 #define SERIAL_FIFO_WRITE_CMD_OFF					(SERIAL_FIFO_MAX_CHANNEL_NUM * 1U)

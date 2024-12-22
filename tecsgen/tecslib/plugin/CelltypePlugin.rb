@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: CelltypePlugin.rb 2638 2017-05-29 14:05:52Z okuma-top $
+#   $Id: CelltypePlugin.rb 3263 2022-12-30 11:45:37Z okuma-top $
 #++
 
 #== celltype プラグインの共通の親クラス
@@ -58,13 +58,6 @@ class CelltypePlugin < Plugin
   def new_cell( cell )
   end
 
-
-  #=== tCelltype_factory.h に挿入するコードを生成する
-  # file 以外の他のファイルにファクトリコードを生成してもよい
-  # セルタイププラグインが指定されたセルタイプのみ呼び出される
-  def gen_factory file
-  end
-
   #=== 後ろの CDL コードを生成
   #プラグインの後ろの CDL コードを生成
   #file:: File: 
@@ -72,5 +65,14 @@ class CelltypePlugin < Plugin
     # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
     # file.print "/* '#{self.class.name}' post code */\n"
   end
+
+  #------ コード生成段階で呼び出されるメソッド --------#
+
+  #=== tCelltype_factory.h に挿入するコードを生成する
+  # file 以外の他のファイルにファクトリコードを生成してもよい
+  # セルタイププラグインが指定されたセルタイプのみ呼び出される
+  def gen_factory file
+  end
+
 end
 

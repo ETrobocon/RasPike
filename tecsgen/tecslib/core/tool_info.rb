@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -67,7 +67,6 @@ class TOOL_INFO
     @@tool_info[name] = val
 
     # __tool_info__( "tecsgen" ): validate & reflect immediately
-    p "tool_info: tecsgen #{name}"
     if name == :tecsgen then
       set_tecsgen_tool_info
     end

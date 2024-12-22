@@ -7,7 +7,7 @@ void SilSetWriteHook(const SilWriteHook hook)
   writeHook = hook;
 }
 
-Std_ReturnType SilCallWriteHook(int size, uint32 addr, const void* data)
+Std_ReturnType SilCallWriteHook(int size, uintptr_t addr, const void* data)
 {
   if ( writeHook ) {
     return (*writeHook)(size,addr,data);

@@ -286,7 +286,7 @@ class CDLContents
         next if next_stat == :HEAD || ( next_stat == :EOF && line != nil )
         # #1002 tecsmerge の非受け口関数 (POSTAMBLE部) の行頭に '{' があるとエラーになる 	
         if (! $old_mode) && ( /^\{/ =~ line ) && ( stat == :PREAMBLE_BODY || stat == :POSTAMBLE_BODY )
-          p line + "  next_stat=" + next_stat.to_s + "stat=" + stat.to_s
+          # p line + "  next_stat=" + next_stat.to_s + "stat=" + stat.to_s
           next
         end
 

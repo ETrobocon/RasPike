@@ -30,13 +30,19 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: mrubyVMs.cdl 2640 2017-06-03 11:27:12Z okuma-top $
+ *  @(#) $Id: mrubyVMs.cdl 2708 2017-11-05 12:12:30Z okuma-top $
  */
+
+ /*
+  * POSIX 向き mruby VM
+  * RTOS 向きのものは tMruby.cdl を使用してください。
+  */
 
 import( <posix.cdl> );
 
 /*
- * tools/mruby/mruby.c から cInit_initializeBridge( mrb ) を呼び出すように変更したもの
+ * POSIX 環境用の VM
+ * mrbgems の mrbgems/mruby-bin-mruby/tools/mruby/mruby.c を参考に作成したもの
  */
 namespace nMruby{
 	[active]

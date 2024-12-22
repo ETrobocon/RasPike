@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: tTDR_inline.h 2032 2014-03-16 12:10:58Z okuma-top $
+ *   $Id: tTDR_inline.h 2780 2018-02-11 11:22:33Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -74,8 +74,15 @@ eTDR_reset(CELLIDX idx)
 	else {
 		return(E_ID);
 	}
+ 	(void)p_cellcb;   // to avoid unused warning
 
-	syslog( LOG_INFO, "TDR: resetting channel" );
+#ifdef RPC_DEBUG
+	{
+	    ID		task_id;
+	    (void)get_tid( &task_id );   // これがとれないことは、タスクコンテキストで動いている限り、ありえないハズ
+	    syslog( LOG_INFO, "TDR: resetting channel task_id=%d", task_id );
+	}
+#endif
 	ercd = cChannel_reset();
 	return(ercd);
 }
@@ -101,6 +108,7 @@ eTDR_sendSOP(CELLIDX idx, bool_t b_client )
 	else {
 		return(E_ID);
 	}
+  	(void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 #ifdef RPC_DEBUG
@@ -119,12 +127,12 @@ eTDR_sendSOP(CELLIDX idx, bool_t b_client )
 
 	val = (uint8_t)(*((uint8_t *)p_sopMagic));
 	ercd = eTDR_putUInt8( idx, val );
-	// syslog( LOG_INFO, "sendSOP:1 %02X", val );
+	// syslog( LOG_INFO, "sendSOP:1 %02X ercd=%d", val, ercd );
 	if( ercd != E_OK )
 		return	ercd;
 	val = (uint8_t)*(((uint8_t *)p_sopMagic)+1);
 	ercd = eTDR_putUInt8( idx, val );
-	// syslog( LOG_INFO, "sendSOP:2 %02X", val );
+	// syslog( LOG_INFO, "sendSOP:2 %02X ercd=%d", val, ercd );
 
 	return	ercd;
 }
@@ -150,13 +158,14 @@ eTDR_receiveSOP(CELLIDX idx, bool_t b_client)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 #ifdef RPC_DEBUG
 	syslog(LOG_INFO, "eTDR_receiveSOP(b_client=%d)", b_client);
 #endif
 
-    if( b_client )
+  if( b_client )
 		p_sopMagic = &SOP_MAGIC2;
 	else
 		p_sopMagic = &SOP_MAGIC1;
@@ -174,8 +183,10 @@ eTDR_receiveSOP(CELLIDX idx, bool_t b_client)
 		ercd = E_MAGIC;
 	}
 
+#ifdef RPC_DEBUG
 	if( ercd != E_OK )
-		syslog( LOG_INFO, "receiveSOP: ERCD=%d", ercd );
+	 	syslog( LOG_INFO, "receiveSOP: ERCD=%d", ercd );
+#endif
 
 	return ercd;
 }
@@ -197,6 +208,7 @@ eTDR_sendEOP(CELLIDX idx, bool_t b_continue )
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 #ifdef RPC_DEBUG
@@ -233,6 +245,7 @@ eTDR_receiveEOP(CELLIDX idx, bool_t b_continue)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 #ifdef RPC_DEBUG
@@ -266,6 +279,7 @@ eTDR_putInt8(CELLIDX idx, int8_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -286,6 +300,7 @@ eTDR_putInt16(CELLIDX idx, int16_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -306,6 +321,7 @@ eTDR_putInt32(CELLIDX idx, int32_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -326,6 +342,7 @@ eTDR_putInt64(CELLIDX idx, int64_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -346,6 +363,7 @@ eTDR_putInt128(CELLIDX idx, int128_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -367,6 +385,7 @@ eTDR_getInt8(CELLIDX idx, int8_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -389,6 +408,7 @@ eTDR_getInt16(CELLIDX idx, int16_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -411,6 +431,7 @@ eTDR_getInt32(CELLIDX idx, int32_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -433,6 +454,7 @@ eTDR_getInt64(CELLIDX idx, int64_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -455,6 +477,7 @@ eTDR_getInt128(CELLIDX idx, int128_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -476,6 +499,7 @@ eTDR_putUInt8(CELLIDX idx, uint8_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -496,6 +520,7 @@ eTDR_putUInt16(CELLIDX idx, uint16_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -516,6 +541,7 @@ eTDR_putUInt32(CELLIDX idx, uint32_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -536,6 +562,7 @@ eTDR_putUInt64(CELLIDX idx, uint64_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -556,6 +583,7 @@ eTDR_putUInt128(CELLIDX idx, uint128_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -577,6 +605,7 @@ eTDR_getUInt8(CELLIDX idx, uint8_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -599,6 +628,7 @@ eTDR_getUInt16(CELLIDX idx, uint16_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -621,6 +651,7 @@ eTDR_getUInt32(CELLIDX idx, uint32_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -643,6 +674,7 @@ eTDR_getUInt64(CELLIDX idx, uint64_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -665,6 +697,7 @@ eTDR_getUInt128(CELLIDX idx, uint128_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -687,6 +720,7 @@ eTDR_putBool(CELLIDX idx, bool_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	eTDR_putUInt8(idx, (uint8_t)(in != 0) );
@@ -704,13 +738,14 @@ eTDR_getBool(CELLIDX idx, bool_t* out)
 {
 	ER		ercd = E_OK;
 	CELLCB	*p_cellcb;
-	uint8_t	val;
+	uint8_t	val = 0;
 	if (VALID_IDX(idx)) {
 		p_cellcb = GET_CELLCB(idx);
 	}
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	ercd = eTDR_getUInt8(idx, &val );
@@ -736,6 +771,7 @@ eTDR_putFloat32(CELLIDX idx, float32_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -756,6 +792,7 @@ eTDR_putDouble64(CELLIDX idx, double64_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -777,6 +814,7 @@ eTDR_getFloat32(CELLIDX idx, float32_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -799,6 +837,7 @@ eTDR_getDouble64(CELLIDX idx, double64_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -820,6 +859,7 @@ eTDR_putChar(CELLIDX idx, char_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -862,6 +902,7 @@ eTDR_putSChar(CELLIDX idx, signed char in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -882,6 +923,7 @@ eTDR_putShort(CELLIDX idx, short_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -902,6 +944,7 @@ eTDR_putInt(CELLIDX idx, int_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -922,6 +965,7 @@ eTDR_putLong(CELLIDX idx, long_t in)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -943,6 +987,7 @@ eTDR_getSChar(CELLIDX idx, signed char* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -965,6 +1010,7 @@ eTDR_getShort(CELLIDX idx, short* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -987,6 +1033,7 @@ eTDR_getInt(CELLIDX idx, int_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1009,6 +1056,7 @@ eTDR_getLong(CELLIDX idx, long_t* out)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1030,6 +1078,7 @@ eTDR_putUChar(CELLIDX idx, unsigned char in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -1050,6 +1099,7 @@ eTDR_putUShort(CELLIDX idx, ushort_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -1070,6 +1120,7 @@ eTDR_putUInt(CELLIDX idx, uint_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -1090,6 +1141,7 @@ eTDR_putULong(CELLIDX idx, ulong_t in)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&in, (int16_t)sizeof( in ), VAR_tmo );
@@ -1111,6 +1163,7 @@ eTDR_getUChar(CELLIDX idx, unsigned char* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1133,6 +1186,7 @@ eTDR_getUShort(CELLIDX idx, unsigned short* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1155,6 +1209,7 @@ eTDR_getUInt(CELLIDX idx, uint_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1177,6 +1232,7 @@ eTDR_getULong(CELLIDX idx, ulong_t* out)
 	else {
 		return(E_ID);
 	} /* end if VALID_IDX(idx) */
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)out, (int16_t)sizeof( *out ), VAR_tmo );
@@ -1198,6 +1254,7 @@ eTDR_putIntptr(CELLIDX idx, const intptr_t ptr)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	return cChannel_send( (int8_t *)&ptr, (int16_t)sizeof( ptr ), VAR_tmo );
@@ -1219,6 +1276,7 @@ eTDR_getIntptr(CELLIDX idx, intptr_t* ptr)
 	else {
 		return(E_ID);
 	}
+  (void)p_cellcb;   // to avoid unused warning
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	er_sz = cChannel_receive( (int8_t *)ptr, (int16_t)sizeof( *ptr ), VAR_tmo );
